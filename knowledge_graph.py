@@ -6,7 +6,7 @@ from langchain_community.document_loaders import WikipediaLoader
 from langchain.text_splitter import TokenTextSplitter
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
-
+from langchain_community.llms.ollama import Ollama
 
 #This will make it way easier to create graphs using the LLM
 from langchain_experimental.graph_transformers import LLMGraphTransformer
@@ -21,6 +21,25 @@ from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePas
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import ConfigurableField
+import json
+import pickle
+
+def export_graph_to_csv(graph,cypher_query, file_path):
+    """
+    Export Neo4j graph data to a CSV file using APOC.
+
+    Parameters:
+    cypher_query (str): The Cypher query to select the data to export.
+    file_path (str): The path to the CSV file where the data will be exported.
+    """
+    export_query = f"CALL apoc.export.csv.query(\"{cypher_query}\", \"{file_path}\", {{}})"
+    with graph._driver.session() as session:
+        session.run(export_query)
+        print(f"Data exported to {file_path}")
+
+
+
+
 
 class Entities(BaseModel):
     #Used to identify information about entitites
@@ -89,7 +108,9 @@ def _format_chat_history(chat_history: List[Tuple[str, str]]) -> List:
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-llm = ChatOpenAI(temperature = 0, model = "gpt-3.5-turbo-0125")
+#llm = ChatOpenAI(temperature = 0, model = "gpt-3.5-turbo-0125")
+llm = Ollama(temperature = 0, model = "llama3", base_url = "http://192.168.2.30:11434")
+
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 
@@ -105,7 +126,14 @@ os.environ["NEO4J_PASSWORD"] = NEO4J_PASSWORD
 os.environ["AURA_INSTANCEID"] = AURA_INSTANCEID
 os.environ["AURA_INSTANCENAME"] = AURA_INSTANCENAME
 
-
+def serialize_graph(graph: Neo4jGraph):
+    # Example serialization process
+    #for node in graph:
+    
+    # This needs to be adapted based on the structure of your Neo4jGraph object
+    serialized_nodes = [{"id": node.id, "properties": node.properties} for node in graph.nodes]
+    serialized_edges = [{"start": edge.start_node.id, "end": edge.end_node.id, "properties": edge.properties} for edge in graph.edges]
+    return {"nodes": serialized_nodes, "edges": serialized_edges}
 
 def load_documents(query = ["George Washington"], num_docs = None):
 
@@ -114,6 +142,7 @@ def load_documents(query = ["George Washington"], num_docs = None):
     for q in query:
         raw_data = WikipediaLoader(query = q).load()
         raw_documents.append(raw_data)
+        print("Loaded:",q)
     
     print('Documents Loaded')
     print(type(raw_documents))
@@ -122,7 +151,7 @@ def load_documents(query = ["George Washington"], num_docs = None):
     text_splitter = TokenTextSplitter(chunk_size = 512, chunk_overlap = 24)
     if num_docs is not None:
         raw_documents = raw_documents[:num_docs]
-    
+    print(len(raw_documents))
     documents = []
     for doc in raw_documents:
         doc = text_splitter.split_documents(doc)
@@ -131,7 +160,7 @@ def load_documents(query = ["George Washington"], num_docs = None):
     print("Documents Split")
     return documents
 
-def convert_documents(documents):
+def convert_documents(documents, path = None):
     global graph
     graph = Neo4jGraph()
 
@@ -139,6 +168,22 @@ def convert_documents(documents):
     graph_documents = llm_transformer.convert_to_graph_documents(documents)
     print("Documents converted")
 
+
+    # # Save the JSON data to a file
+    # with open('graph_data.json', 'w') as file:
+    #     file.write(graph_data_json)
+
+    # if path != None:
+    #     try:
+    #         with open(path, 'r') as file:
+    #             graph_data_json = file.read()
+    #         file.close()
+
+    #         # Convert JSON back to the Python data structure
+    #         graph_documents = json.loads(graph_data_json)
+    #         print("Loaded graph data")
+    #     except:
+    #         print("Error loading graph data from file")
 
     #Storing the data in Neo4j graph database. Nodes represent entities, edges represent relationships between entities
     # data is stored as nodes, relationships, and properties (attributes of nodes and relationships like name or age)
@@ -150,8 +195,15 @@ def convert_documents(documents):
         include_source=True
     )
     graph.query("CREATE FULLTEXT INDEX entity IF NOT EXISTS FOR (e:__Entity__) ON EACH [e.id]")
-
     
+    #serialized_graph = serialize_graph(graph)
+    
+    #pickle.dump(graph, open("graph.pkl", "wb"))
+    export_graph_to_csv(graph,"MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m", r"C:\Users\devxm\Documents\AI Stuff\llm-policy-generation\graphs\exported_graph.csv")
+    #graph_json = json.dumps(serialized_graph)
+    #with open('graph.json', 'w') as file:
+    #    file.write(graph_json)
+    #file.close()
 
     #Directly show the graph resulting from the given cypher query
     default_cypher = "MATCH (s)-[r:!MENTIONS]->(t) RETURN s,r,t LIMIT 50"
@@ -233,7 +285,7 @@ def create_graph(graph, documents):
     {context}
 
     Question: {question}
-    Use natural language and be concise.
+    Use natural language in your answer.
     Answer:"""
 
     prompt = ChatPromptTemplate.from_template(template)
@@ -258,3 +310,25 @@ def create_graph(graph, documents):
 #except:
 #     #breakpoint()
 
+
+def save_neo4j_database(graph_documents):
+    graph_data_json = json.dumps(graph_documents)
+
+    # Save the JSON data to a file
+    with open('graph_data.json', 'w') as file:
+        file.write(graph_data_json)
+
+def load_neo4j_database(graph_documents):
+    with open('graph_data.json', 'r') as file:
+        graph_data_json = file.read()
+
+    # Convert JSON back to the Python data structure
+    graph_documents = json.loads(graph_data_json)
+
+    # Assuming you have a function or method to add documents to your Neo4j graph
+    # Recreate the graph in Neo4j
+    graph.add_graph_documents(
+        graph_documents,
+        baseEntityLabel=True,
+        include_source=True
+    )
