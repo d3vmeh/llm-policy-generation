@@ -135,7 +135,7 @@ def serialize_graph(graph: Neo4jGraph):
     serialized_edges = [{"start": edge.start_node.id, "end": edge.end_node.id, "properties": edge.properties} for edge in graph.edges]
     return {"nodes": serialized_nodes, "edges": serialized_edges}
 
-def load_documents(query = ["George Washington"], num_docs = None):
+def load_documents(query = [""], num_docs = None):
 
     print("Loading documents from Wikipedia")
     raw_documents = []
