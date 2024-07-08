@@ -104,11 +104,6 @@ llm = ChatOpenAI(temperature = 0, model = "gpt-3.5-turbo")
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 
-# NEO4J_URI = "neo4j+s://f828f838.databases.neo4j.io"
-# NEO4J_USERNAME = "neo4j"
-# NEO4J_PASSWORD = "CfaHgQY5uwag_HGdbXQbBF66k5Or-NlAfTmWlFB1CTw"
-# AURA_INSTANCEID = "f828f838"
-# AURA_INSTANCENAME = "Instance01"
 
 NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
@@ -116,14 +111,6 @@ NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 AURA_INSTANCEID = os.environ["AURA_INSTANCEID"]
 AURA_INSTANCENAME = os.environ["AURA_INSTANCENAME"]
 
-# def serialize_graph(graph: Neo4jGraph):
-#     # Example serialization process
-#     #for node in graph:
-    
-#     # This needs to be adapted based on the structure of your Neo4jGraph object
-#     serialized_nodes = [{"id": node.id, "properties": node.properties} for node in graph.nodes]
-#     serialized_edges = [{"start": edge.start_node.id, "end": edge.end_node.id, "properties": edge.properties} for edge in graph.edges]
-#     return {"nodes": serialized_nodes, "edges": serialized_edges}
 
 def load_documents(query = [""], num_docs = None):
 
@@ -202,10 +189,6 @@ def convert_documents(documents, path = None):
 
 
 
-#Neo4jVector.delete_index("vector")
-
-# Create a new vector index with the correct dimension
-#Neo4jVector.create_index("vector", dimension=1536) #Dimension used to be 384, but I have changed it to 1536 in this line to match the dimension of the OpenAI embeddings
 
 
 def create_vector_index():
@@ -239,7 +222,6 @@ def create_graph(graph, documents):
     global entity_chain
     entity_chain = prompt | llm.with_structured_output(Entities)
 
-    #print(structured_retriever("Who is George Washington?"))
 
 
     _template = """Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question,
@@ -292,31 +274,3 @@ def create_graph(graph, documents):
     )
     return chain
 
-#breakpoint()
-#try:
-#    print(chain.invoke({"question": "Where was George Washington born?"}))
-#except:
-#     #breakpoint()
-
-
-# def save_neo4j_database(graph_documents):
-#     graph_data_json = json.dumps(graph_documents)
-
-#     # Save the JSON data to a file
-#     with open('graph_data.json', 'w') as file:
-#         file.write(graph_data_json)
-
-# def load_neo4j_database(graph_documents):
-#     with open('graph_data.json', 'r') as file:
-#         graph_data_json = file.read()
-
-#     # Convert JSON back to the Python data structure
-#     graph_documents = json.loads(graph_data_json)
-
-#     # Assuming you have a function or method to add documents to your Neo4j graph
-#     # Recreate the graph in Neo4j
-#     graph.add_graph_documents(
-#         graph_documents,
-#         baseEntityLabel=True,
-#         include_source=True
-#     )
