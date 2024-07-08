@@ -24,22 +24,12 @@ from langchain_core.runnables import ConfigurableField
 import json
 import pickle
 
-def export_graph_to_csv(graph,cypher_query, file_path):
-    """
-    Export Neo4j graph data to a CSV file using APOC.
-
-    Parameters:
-    cypher_query (str): The Cypher query to select the data to export.
-    file_path (str): The path to the CSV file where the data will be exported.
-    """
-    export_query = f"CALL apoc.export.csv.query(\"{cypher_query}\", \"{file_path}\", {{}})"
-    with graph._driver.session() as session:
-        session.run(export_query)
-        print(f"Data exported to {file_path}")
+import time
 
 
-
-
+"""
+Inspired by 'Realtime Powerful RAG Pipeline using Neo4j(Knowledge Graph Db) and Langchain' by https://github.com/sunnysavita10
+"""
 
 class Entities(BaseModel):
     #Used to identify information about entitites
@@ -108,32 +98,32 @@ def _format_chat_history(chat_history: List[Tuple[str, str]]) -> List:
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-#llm = ChatOpenAI(temperature = 0, model = "gpt-3.5-turbo-0125")
-llm = Ollama(temperature = 0, model = "llama3", base_url = "http://192.168.2.30:11434")
+llm = ChatOpenAI(temperature = 0, model = "gpt-3.5-turbo")
+#llm = Ollama(temperature = 0, model = "llama3", base_url = "http://192.168.2.30:11434")
 
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 
-NEO4J_URI = "neo4j+s://f828f838.databases.neo4j.io"
-NEO4J_USERNAME = "neo4j"
-NEO4J_PASSWORD = "CfaHgQY5uwag_HGdbXQbBF66k5Or-NlAfTmWlFB1CTw"
-AURA_INSTANCEID = "f828f838"
-AURA_INSTANCENAME = "Instance01"
+# NEO4J_URI = "neo4j+s://f828f838.databases.neo4j.io"
+# NEO4J_USERNAME = "neo4j"
+# NEO4J_PASSWORD = "CfaHgQY5uwag_HGdbXQbBF66k5Or-NlAfTmWlFB1CTw"
+# AURA_INSTANCEID = "f828f838"
+# AURA_INSTANCENAME = "Instance01"
 
-os.environ["NEO4J_URI"] = NEO4J_URI
-os.environ["NEO4J_USERNAME"] = NEO4J_USERNAME
-os.environ["NEO4J_PASSWORD"] = NEO4J_PASSWORD
-os.environ["AURA_INSTANCEID"] = AURA_INSTANCEID
-os.environ["AURA_INSTANCENAME"] = AURA_INSTANCENAME
+NEO4J_URI = os.environ["NEO4J_URI"]
+NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
+NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
+AURA_INSTANCEID = os.environ["AURA_INSTANCEID"]
+AURA_INSTANCENAME = os.environ["AURA_INSTANCENAME"]
 
-def serialize_graph(graph: Neo4jGraph):
-    # Example serialization process
-    #for node in graph:
+# def serialize_graph(graph: Neo4jGraph):
+#     # Example serialization process
+#     #for node in graph:
     
-    # This needs to be adapted based on the structure of your Neo4jGraph object
-    serialized_nodes = [{"id": node.id, "properties": node.properties} for node in graph.nodes]
-    serialized_edges = [{"start": edge.start_node.id, "end": edge.end_node.id, "properties": edge.properties} for edge in graph.edges]
-    return {"nodes": serialized_nodes, "edges": serialized_edges}
+#     # This needs to be adapted based on the structure of your Neo4jGraph object
+#     serialized_nodes = [{"id": node.id, "properties": node.properties} for node in graph.nodes]
+#     serialized_edges = [{"start": edge.start_node.id, "end": edge.end_node.id, "properties": edge.properties} for edge in graph.edges]
+#     return {"nodes": serialized_nodes, "edges": serialized_edges}
 
 def load_documents(query = [""], num_docs = None):
 
@@ -143,6 +133,7 @@ def load_documents(query = [""], num_docs = None):
         raw_data = WikipediaLoader(query = q).load()
         raw_documents.append(raw_data)
         print("Loaded:",q)
+        time.sleep(1)
     
     print('Documents Loaded')
     print(type(raw_documents))
@@ -199,7 +190,7 @@ def convert_documents(documents, path = None):
     #serialized_graph = serialize_graph(graph)
     
     #pickle.dump(graph, open("graph.pkl", "wb"))
-    export_graph_to_csv(graph,"MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m", r"C:\Users\devxm\Documents\AI Stuff\llm-policy-generation\graphs\exported_graph.csv")
+    #export_graph_to_csv(graph,"MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m", r"C:\Users\devxm\Documents\AI Stuff\llm-policy-generation\graphs\exported_graph.csv")
     #graph_json = json.dumps(serialized_graph)
     #with open('graph.json', 'w') as file:
     #    file.write(graph_json)
@@ -247,9 +238,6 @@ def create_graph(graph, documents):
     )
     global entity_chain
     entity_chain = prompt | llm.with_structured_output(Entities)
-    print("=====================================")
-    print(entity_chain.invoke({"question": "Where was George Washington born?"}).names)
-    print("=====================================")
 
     #print(structured_retriever("Who is George Washington?"))
 
@@ -311,24 +299,24 @@ def create_graph(graph, documents):
 #     #breakpoint()
 
 
-def save_neo4j_database(graph_documents):
-    graph_data_json = json.dumps(graph_documents)
+# def save_neo4j_database(graph_documents):
+#     graph_data_json = json.dumps(graph_documents)
 
-    # Save the JSON data to a file
-    with open('graph_data.json', 'w') as file:
-        file.write(graph_data_json)
+#     # Save the JSON data to a file
+#     with open('graph_data.json', 'w') as file:
+#         file.write(graph_data_json)
 
-def load_neo4j_database(graph_documents):
-    with open('graph_data.json', 'r') as file:
-        graph_data_json = file.read()
+# def load_neo4j_database(graph_documents):
+#     with open('graph_data.json', 'r') as file:
+#         graph_data_json = file.read()
 
-    # Convert JSON back to the Python data structure
-    graph_documents = json.loads(graph_data_json)
+#     # Convert JSON back to the Python data structure
+#     graph_documents = json.loads(graph_data_json)
 
-    # Assuming you have a function or method to add documents to your Neo4j graph
-    # Recreate the graph in Neo4j
-    graph.add_graph_documents(
-        graph_documents,
-        baseEntityLabel=True,
-        include_source=True
-    )
+#     # Assuming you have a function or method to add documents to your Neo4j graph
+#     # Recreate the graph in Neo4j
+#     graph.add_graph_documents(
+#         graph_documents,
+#         baseEntityLabel=True,
+#         include_source=True
+#     )

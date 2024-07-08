@@ -1,2 +1,4 @@
 __pycache__/
 graphs/
+text_documents/
+database_tools.py
