@@ -15,8 +15,13 @@ from langchain_community.vectorstores.neo4j_vector import remove_lucene_chars
 import os
 from langchain_core.documents import Document
 #from knowledge_graph import load_documents
+from timebudget import timebudget
+from langchain_community.document_loaders.pdf import PyPDFDirectoryLoader
 
 def load_documents():
+
+
+    print("Loading text documents")
     filenames = os.listdir("text_documents/")
     documents = []
     for f in filenames:
@@ -32,7 +37,13 @@ def load_documents():
         
         document = Document(text)
         documents.append(document)
+    print("Text documents loaded")
 
+    print("Loading PDFs")
+    
+    doc_loader = PyPDFDirectoryLoader("PDFs/")
+    docs = doc_loader.load()
+    documents += docs
     print("Loaded documents")
     return documents
 
@@ -69,12 +80,19 @@ raw_documents = load_documents()
 text_splitter = TokenTextSplitter(chunk_size=512, chunk_overlap=24)
 documents = text_splitter.split_documents(raw_documents)
 print("Number of documents:", len(documents))
+print(documents[0])
+
+
 
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #keep temperature 0
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 print("Converting to graph documents")
-graph_documents = llm_transformer.convert_to_graph_documents(documents)
+
+with timebudget("Time to convert documents: "):  
+    graph_documents = llm_transformer.convert_to_graph_documents(documents)
+
+
 graph.add_graph_documents(
     graph_documents,
     baseEntityLabel=True,

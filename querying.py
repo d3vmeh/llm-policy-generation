@@ -104,22 +104,30 @@ def retriever(question: str):
     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]  #context from graph database - text
     final_data = f"""Structured data:
                     {structured_data}
+
                     Unstructured data:
                     {"#Document ". join(unstructured_data)}
                     """
     return final_data
 
-template = """You are an experienced advisor and international diplomat who is assisting the US government in foreign policy. Answer the question based only on the following context:
+prompt = ChatPromptTemplate.from_messages(
+        [
+        ("system", "You are an experienced advisor and international diplomat who is assisting the US government in foreign policy. You use natural language "
+         "to answer questions based on structured and unstructured data. You are thoughtful and thorough in your responses."),
+        ("user", """
+        Answer the question based only on the following context. The structured data shows major entities and their relationships which you should consider 
+         in your respons. The unstructured data shows the relevant text from the 
+         documents which you should also consider when preparing your response:
         {context}
 
         Question: {question}
         Use natural language and be detailed and thorough.
         Answer:
-        """
-        #Use natural language and be concise.
+        """)
+        ]
+        )
 
-prompt = ChatPromptTemplate.from_template(template)
-
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.5)
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
