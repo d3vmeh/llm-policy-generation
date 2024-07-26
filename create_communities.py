@@ -43,6 +43,25 @@ def create_graph_projection():
     print("=============================================")
     return graph_projection
 
+def get_local_clustering_coefficients():
+    clustering_coefficients = gds.run_cypher("""
+        CALL gds.localClusteringCoefficient.stream('myGraph')
+        YIELD nodeId, localClusteringCoefficient
+        RETURN gds.util.asNode(nodeId).id AS name, localClusteringCoefficient
+        ORDER BY localClusteringCoefficient DESC
+    """)
+    return clustering_coefficients
+
+def get_node_popularity():
+    popularity = gds.run_cypher("""
+        CALL gds.degree.stream('myGraph')
+        YIELD nodeId, score
+        RETURN gds.util.asNode(nodeId).id AS name, score AS popularity
+        ORDER BY popularity DESC            
+    """)
+    return popularity
+
+
 
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
 gds.graph.drop("myGraph")
@@ -69,23 +88,18 @@ query = """
     WITH componentId, collect(node) AS sub
     WITH componentId, sub, size(sub) AS componentSize
     RETURN componentId, componentSize, sub
-    ORDER BY componentSize DESC
+    ORDER BY componentSize DESC 
 """
 components = gds.run_cypher(query)
 print(components)
 
-query = """
+n, c = gds.run_cypher("""
     CALL gds.wcc.write('myGraph', { writeProperty: 'community' }) 
     YIELD nodePropertiesWritten, componentCount;
-"""
-
-n, c = gds.run_cypher(query)
+""")
 
 
-print(n)
-print(c)
 gds.louvain.mutate(G, mutateProperty="community")
-
 
 print(gds.graph.nodeProperties.write(G, ["community"]))
 
@@ -96,8 +110,16 @@ gds.run_cypher(
     """
 )
 
+clustering_coefficients = get_local_clustering_coefficients()
 
+print(clustering_coefficients[0:5])
+print(clustering_coefficients[-5:])
 
+print("=============================================")
+node_popularity = get_node_popularity()
+print(len(node_popularity))
+print(node_popularity[0:5])
+print(node_popularity[-5:])
 
 
 
