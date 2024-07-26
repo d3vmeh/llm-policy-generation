@@ -36,7 +36,7 @@ graph = Neo4jGraph()
 
 vector_index = Neo4jVector.from_existing_graph(
     OpenAIEmbeddings(),
-    search_type="hybrid", #search being performed on embedding and keyword as well
+    search_type="hybrid", #searching embedding and keyword
     node_label="Document",
     text_node_properties=["text"],
     embedding_node_property="embedding"
@@ -136,23 +136,3 @@ chain = (
     | StrOutputParser()
 )
 
-#Testing
-# breakpoint()
-# question = "Which house did Elizabeth I belong to?"
-# structured_data = structured_retriever(question)
-# print(structured_data)
-# unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]
-# print(unstructured_data)
-# print(retriever(question))
-
-# breakpoint()
-# resp = chain.invoke("Which house did Elizabeth I belong to?")
-# print(resp)
-
-# resp = chain.invoke("What were Elizabeth's key achievements?")
-# print(resp)
-
-# resp = chain.invoke("Write a 500 word paragraph on Elizabeth's life, highlighting her key achievements?")
-# print(resp)
-
-# graph._driver.close()

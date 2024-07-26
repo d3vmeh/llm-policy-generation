@@ -14,7 +14,6 @@ from langchain_community.vectorstores.neo4j_vector import remove_lucene_chars
 
 import os
 from langchain_core.documents import Document
-#from knowledge_graph import load_documents
 from timebudget import timebudget
 from langchain_community.document_loaders.pdf import PyPDFDirectoryLoader
 
@@ -55,10 +54,6 @@ NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
 
 graph = Neo4jGraph()
-#raw_documents = WikipediaLoader(query="Elizabeth I").load()
-
-
-
 
 # raw_documents = load_documents(query = [
 #     "China–United States relations",
@@ -76,7 +71,8 @@ graph = Neo4jGraph()
 # ])
 
 raw_documents = load_documents()
-#we'll just work with first 3 documents for now
+
+
 text_splitter = TokenTextSplitter(chunk_size=512, chunk_overlap=24)
 documents = text_splitter.split_documents(raw_documents)
 print("Number of documents:", len(documents))
@@ -84,7 +80,7 @@ print(documents[0])
 
 
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #keep temperature 0
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #Need to keep temperature 0
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 print("Converting to graph documents")
