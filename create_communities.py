@@ -30,52 +30,64 @@ with driver.session() as session:
 
 # Convert node labels and relationship types to the format expected by gds.graph.project
 node_projection = {label: {} for label in node_labels}  # Assuming no properties to include
-relationship_projection = {rel_type: {} for rel_type in relationship_types}  # Assuming no properties to include
+relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type in relationship_types}  # Assuming no properties to include
 
-print("Starting projection")
-# Project the graph using the extracted schema
+def create_graph_projection():
+    print("Creating graph projection")
+    graph_projection = gds.graph.project(
+    "myGraph",
+    node_projection,
+    relationship_projection,
+    )
+    print("Graph projection created")
+    print("=============================================")
+    return graph_projection
 
 
+#MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
+gds.graph.drop("myGraph")
 
+graph_projection = create_graph_projection()
 
-# graph_projection = gds.graph.project(
-#     "myGraph",
-#     node_projection,
-#     relationship_projection
-# )
-# print("=============================================")
-
-# print(type(graph_projection))
-
-# print(graph.get_structured_schema)
-# graph_projection = gds.graph.project(
-#     "myGraph",
-#     {
-#         "NodeLabel": {}  # Specify node labels and properties here
-#     },
-#     {
-#         "REL_TYPE": {}  # Specify relationship types and properties here
-#     }
-# )
-
-# # result = gds.wcc.mutate(graph, mutateProperty = "componentId")
-# # print("Components found:", result.componentCount)
-
-graph = Neo4jGraph()
-
-#G, result = gds.graph.project("testingGraph",)
 
 
 
-G, r = gds.graph.get("")
-
-#print(G.node_labels)
-gds.louvain.mutate(G, mutateProperty="louvainCommunityId")
+graph = Neo4jGraph()
+G = gds.graph.get("myGraph")
 
 
-print(gds.graph.nodeProperties.write(G, ["louvainCommunityId"]))
+print("Searching for weakly connected components")
+result = gds.wcc.mutate(G, mutateProperty = "componentId")
+print("Components found:", result.componentCount)
 
 
+#Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
+query = """
+    CALL gds.graph.nodeProperties.stream('myGraph', 'componentId')
+    YIELD nodeId, propertyValue
+    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+    WITH componentId, collect(node) AS sub
+    WITH componentId, sub, size(sub) AS componentSize
+    RETURN componentId, componentSize, sub
+    ORDER BY componentSize DESC
+"""
+components = gds.run_cypher(query)
+print(components)
+
+query = """
+    CALL gds.wcc.write('myGraph', { writeProperty: 'community' }) 
+    YIELD nodePropertiesWritten, componentCount;
+"""
+
+n, c = gds.run_cypher(query)
+
+
+print(n)
+print(c)
+gds.louvain.mutate(G, mutateProperty="community")
+
+
+print(gds.graph.nodeProperties.write(G, ["community"]))
 
 gds.run_cypher(
     """
@@ -83,3 +95,9 @@ gds.run_cypher(
     RETURN n.name, n.louvainCommunityId LIMIT 10
     """
 )
+
+
+
+
+
+
