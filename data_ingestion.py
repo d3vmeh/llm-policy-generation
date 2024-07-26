@@ -90,7 +90,7 @@ llm_transformer = LLMGraphTransformer(llm=llm)
 print("Converting to graph documents")
 
 with timebudget("Time to convert documents: "):  
-    graph_documents = llm_transformer.convert_to_graph_documents(documents)
+    graph_documents = llm_transformer.convert_to_graph_documents(documents[:20])
 
 
 graph.add_graph_documents(

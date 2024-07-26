@@ -1,6 +1,9 @@
 from querying import *
+import sys
 
 
+
+print(graph)
 
 while True:
     q = input("\nEnter a query: ")

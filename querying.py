@@ -22,7 +22,6 @@ import pdb
 
 import os
 
-
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
@@ -32,6 +31,8 @@ NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
 llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 graph = Neo4jGraph()
+
+
 
 vector_index = Neo4jVector.from_existing_graph(
     OpenAIEmbeddings(),
