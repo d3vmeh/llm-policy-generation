@@ -80,13 +80,13 @@ print(documents[0])
 
 
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0) #Need to keep temperature 0
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0) #Need to keep temperature 0
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 print("Converting to graph documents")
 
 with timebudget("Time to convert documents: "):  
-    graph_documents = llm_transformer.convert_to_graph_documents(documents[:20])
+    graph_documents = llm_transformer.convert_to_graph_documents(documents)
 
 
 graph.add_graph_documents(
