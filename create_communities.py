@@ -2,8 +2,7 @@ from graphdatascience import GraphDataScience
 from graphdatascience.server_version.server_version import ServerVersion
 from querying import *
 from neo4j import GraphDatabase
-#from data_ingestion import graph
-
+import pandas as pd
 
 
 gds = GraphDataScience(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
@@ -61,6 +60,14 @@ def get_node_popularity():
     """)
     return popularity
 
+def get_triangle_count():
+    triangle_count = gds.run_cypher("""
+        CALL gds.triangleCount.stream('myGraph')
+        YIELD nodeId, triangleCount
+        RETURN gds.util.asNode(nodeId).id AS name, triangleCount
+        ORDER BY triangleCount DESC
+    """)
+    return triangle_count
 
 
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
@@ -85,15 +92,15 @@ query = """
     CALL gds.graph.nodeProperties.stream('myGraph', 'componentId')
     YIELD nodeId, propertyValue
     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-    WITH componentId, collect(node) AS sub
-    WITH componentId, sub, size(sub) AS componentSize
-    RETURN componentId, componentSize, sub
+    WITH componentId, collect(node) AS comp
+    WITH componentId, comp, size(comp) AS componentSize
+    RETURN componentId, componentSize, comp
     ORDER BY componentSize DESC 
 """
 components = gds.run_cypher(query)
 print(components)
 
-n, c = gds.run_cypher("""
+gds.run_cypher("""
     CALL gds.wcc.write('myGraph', { writeProperty: 'community' }) 
     YIELD nodePropertiesWritten, componentCount;
 """)
@@ -111,15 +118,50 @@ gds.run_cypher(
 )
 
 clustering_coefficients = get_local_clustering_coefficients()
+print(clustering_coefficients,'\n')
 
-print(clustering_coefficients[0:5])
-print(clustering_coefficients[-5:])
-
-print("=============================================")
 node_popularity = get_node_popularity()
-print(len(node_popularity))
-print(node_popularity[0:5])
-print(node_popularity[-5:])
+print(node_popularity,'\n')
+
+triangle_count = get_triangle_count()
+print(triangle_count,'\n')
+
+community_query = """
+    CALL gds.graph.nodeProperties.stream('myGraph', 'community')
+    YIELD nodeId, propertyValue
+    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS community
+    WITH community, collect(node) AS comp
+    WITH community, comp, size(comp) AS componentSize
+    RETURN community, componentSize, comp
+    ORDER BY componentSize DESC
+"""
+communities = gds.run_cypher(community_query)
+print("\nCommunities:")
+print(communities)
+#for c in largest_communities:
+    #print(c['componentId'])
 
 
 
+all_community_components = []
+community_summaries = []
+for c in communities:
+    c_components = communities['comp'].to_list()[0]
+    all_community_components.append(c_components)
+
+print(all_community_components[0][:10])
+
+
+# smallest_community_query = """
+#     CALL gds.graph.nodeProperties.stream('myGraph', 'community')
+#     YIELD nodeId, propertyValue
+#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS community
+#     WITH community, collect(node) AS comp
+#     WITH community, comp, size(comp) AS componentSize
+#     RETURN community, componentSize, comp
+#     ORDER BY componentSize ASC
+#     LIMIT 1
+# """
+# smallest_community = gds.run_cypher(smallest_community_query)
+# print("\nSmallest community:")
+# print(smallest_community)

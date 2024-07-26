@@ -128,7 +128,7 @@ prompt = ChatPromptTemplate.from_messages(
         ]
         )
 
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.5)
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
