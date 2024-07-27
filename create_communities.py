@@ -9,7 +9,7 @@ from langchain_core.runnables import (
     RunnableParallel,
     RunnablePassthrough,
 )
-
+import pickle
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
@@ -136,9 +136,9 @@ def get_community_id(node_id: str) -> str:
 
 
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
-gds.graph.drop("myGraph")
+#gds.graph.drop("myGraph")
 
-graph_projection = create_graph_projection()
+g#raph_projection = create_graph_projection()
 
 
 
@@ -147,40 +147,40 @@ graph_projection = create_graph_projection()
 G = gds.graph.get("myGraph")
 
 
-print("Searching for weakly connected components")
-result = gds.wcc.mutate(G, mutateProperty = "componentId")
-print("Components found:", result.componentCount)
+# print("Searching for weakly connected components")
+# result = gds.wcc.mutate(G, mutateProperty = "componentId")
+# print("Components found:", result.componentCount)
 
 
-#Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
-query = """
-    CALL gds.graph.nodeProperties.stream('myGraph', 'componentId')
-    YIELD nodeId, propertyValue
-    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-    WITH componentId, collect(node) AS comp
-    WITH componentId, comp, size(comp) AS componentSize
-    RETURN componentId, componentSize, comp
-    ORDER BY componentSize DESC 
-"""
-components = gds.run_cypher(query)
-print(components)
+# #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
+# query = """
+#     CALL gds.graph.nodeProperties.stream('myGraph', 'componentId')
+#     YIELD nodeId, propertyValue
+#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+#     WITH componentId, collect(node) AS comp
+#     WITH componentId, comp, size(comp) AS componentSize
+#     RETURN componentId, componentSize, comp
+#     ORDER BY componentSize DESC 
+# """
+# components = gds.run_cypher(query)
+# print(components)
 
-gds.run_cypher("""
-    CALL gds.wcc.write('myGraph', { writeProperty: 'community' }) 
-    YIELD nodePropertiesWritten, componentCount;
-""")
+# gds.run_cypher("""
+#     CALL gds.wcc.write('myGraph', { writeProperty: 'community' }) 
+#     YIELD nodePropertiesWritten, componentCount;
+# """)
 
 
-gds.louvain.mutate(G, mutateProperty="community")
+# gds.louvain.mutate(G, mutateProperty="community")
 
-print(gds.graph.nodeProperties.write(G, ["community"]))
+# print(gds.graph.nodeProperties.write(G, ["community"]))
 
-gds.run_cypher(
-    """
-    MATCH (n) WHERE 'louvainCommunityId' IN keys(n) 
-    RETURN n.name, n.louvainCommunityId LIMIT 10
-    """
-)
+# gds.run_cypher(
+#     """
+#     MATCH (n) WHERE 'louvainCommunityId' IN keys(n) 
+#     RETURN n.name, n.louvainCommunityId LIMIT 10
+#     """
+# )
 
 clustering_coefficients = get_local_clustering_coefficients()
 #print(clustering_coefficients,'\n')
@@ -222,35 +222,30 @@ for x in range(len(communities.index)):
 print("Count:",count)
 #f = open("community_summaries.txt",'w', encoding="utf-8")
 
-summaries = {}
+#summaries = {}
 #print(all_community_components)
 community_ids = communities['community'].to_list()
-print(community_ids)
-for i in range(len(all_community_components)):
-    print(i)
-    converted_string = ", ".join(str(x) for x in all_community_components[i])
-    #print(converted_string)
-    s = create_community_summary(converted_string)
-    #c = get_community_id(all_community_components[i][0])
-    summaries[community_ids[i]] = s
-    print(s)
+# print(community_ids)
+# for i in range(len(all_community_components)):
+#     print(i)
+#     converted_string = ", ".join(str(x) for x in all_community_components[i])
+#     #print(converted_string)
+#     s = create_community_summary(converted_string)
+#     #c = get_community_id(all_community_components[i][0])
+#     summaries[community_ids[i]] = s
+#     print(s)
 
+#Uncomment when generating new summaries
+# with open("community_summaries.pkl",'wb') as file:
+#     pickle.dump(summaries, file)
+#     file.close()
 
-    #print("\n=============================================\n")
-    #print(s)
-    #print("=============================================\n\n")
-    #try:
-    #    f.write(s)
-    #except:
-    #    print("Error writing to file")
-    #    continue
-
-
-
-
-
-
-
+with open('community_summaries.pkl', 'rb') as file: 
+      
+    # Call load method to deserialze 
+    summaries = pickle.load(file) 
+  
+    print(type(summaries),len(summaries)) 
 #f.close()
 #print("Completed")
 # smallest_community_query = """
