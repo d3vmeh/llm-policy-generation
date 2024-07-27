@@ -138,7 +138,7 @@ def get_community_id(node_id: str) -> str:
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
 #gds.graph.drop("myGraph")
 
-g#raph_projection = create_graph_projection()
+#graph_projection = create_graph_projection()
 
 
 
@@ -151,6 +151,17 @@ G = gds.graph.get("myGraph")
 # result = gds.wcc.mutate(G, mutateProperty = "componentId")
 # print("Components found:", result.componentCount)
 
+# print("Searching for strongly connected components")
+# result = gds.scc.mutate(G, mutateProperty = "componentId")
+# print("Components found:", result.componentCount)
+
+
+
+
+# print("Searching for strongly connected components")
+# result = gds.scc.stream(G)
+# print(result)
+# print("Components found:", result.componentCount)
 
 # #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
 # query = """
@@ -183,13 +194,13 @@ G = gds.graph.get("myGraph")
 # )
 
 clustering_coefficients = get_local_clustering_coefficients()
-#print(clustering_coefficients,'\n')
+print(clustering_coefficients,'\n')
 
 node_popularity = get_node_popularity()
-#print(node_popularity,'\n')
+print(node_popularity,'\n')
 
 triangle_count = get_triangle_count()
-#print(triangle_count,'\n')
+print(triangle_count,'\n')
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph', 'community')
@@ -222,20 +233,32 @@ for x in range(len(communities.index)):
 print("Count:",count)
 #f = open("community_summaries.txt",'w', encoding="utf-8")
 
-#summaries = {}
+summaries = {}
 #print(all_community_components)
 community_ids = communities['community'].to_list()
-# print(community_ids)
-# for i in range(len(all_community_components)):
-#     print(i)
-#     converted_string = ", ".join(str(x) for x in all_community_components[i])
-#     #print(converted_string)
-#     s = create_community_summary(converted_string)
-#     #c = get_community_id(all_community_components[i][0])
-#     summaries[community_ids[i]] = s
-#     print(s)
 
-#Uncomment when generating new summaries
+# sizes = communities['componentSize'].to_list()
+
+# for s in range(len(sizes)):
+#     if 1 < sizes[s] <= 3:
+#         print("Community ID:",community_ids[s],"Size:",sizes[s])
+#         print(all_community_components[s])
+#         print("\n")
+
+# #Uncomment when generating new summaries
+# for i in range(len(all_community_components)):
+#     #print(i)
+#     if sizes[i] > 1:
+#         converted_string = ", ".join(str(x) for x in all_community_components[i])
+
+#         #print(converted_string)
+#         s = create_community_summary(converted_string)
+#         #c = get_community_id(all_community_components[i][0])
+#         summaries[community_ids[i]] = s
+#         print(s)
+#     if sizes[i] <= 1:
+#         break
+
 # with open("community_summaries.pkl",'wb') as file:
 #     pickle.dump(summaries, file)
 #     file.close()
@@ -245,7 +268,9 @@ with open('community_summaries.pkl', 'rb') as file:
     # Call load method to deserialze 
     summaries = pickle.load(file) 
   
-    print(type(summaries),len(summaries)) 
+    print(f"Loaded all summaries. {len(summaries)} from file") 
+
+print(summaries[2247])
 #f.close()
 #print("Completed")
 # smallest_community_query = """
@@ -261,3 +286,4 @@ with open('community_summaries.pkl', 'rb') as file:
 # smallest_community = gds.run_cypher(smallest_community_query)
 # print("\nSmallest community:")
 # print(smallest_community)
+

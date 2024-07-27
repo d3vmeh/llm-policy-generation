@@ -78,7 +78,10 @@ def generate_full_text_query(input: str) -> str:
 
 # Fulltext index query
 def structured_retriever(question: str) -> str:
+    print("RUNNING STRUCTURED RETRIEVER")
     result = ""
+    nodes= []
+    neighbors = []
     entities = entity_chain.invoke({"question": question})
     for entity in entities.names:
         response = graph.query(
@@ -97,22 +100,25 @@ def structured_retriever(question: str) -> str:
             """,
             {"query": generate_full_text_query(entity)},
         )
-        nodes= []
+        
         for n in response:
             node = n['nodeId']
             if node not in nodes:
                 nodes.append(node)
-        #print(nodes)
+        #print("Nodes:",nodes)
 
-        neighbors = []
+        
         for e in response:
             neighbor = e['neighborId']
             if neighbor not in neighbors:
                 neighbors.append(neighbor)
-        #print(neighbors)
+        #print("Neighbors:",neighbors)
 
+        
 
         result += "\n".join([el['output'] for el in response])
+
+    #print("Returning:",nodes,neighbors)
     return result, nodes, neighbors
 
 def retriever(question: str):
@@ -120,8 +126,11 @@ def retriever(question: str):
     structured_data, related_nodes, neighbors = structured_retriever(question) #context from graph database - nodes, relationships
     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]  #context from graph database - text
 
+    print(related_nodes)
+    print(neighbors)
     community_ids = []
     for node in related_nodes:
+        #print("Node:",node)
         community_ids.append(get_community_id(node))
     for neighbor in neighbors:
         community_ids.append(get_community_id(neighbor))
@@ -131,10 +140,10 @@ def retriever(question: str):
     s = []
     for i in community_ids:
         if i != None and i in summaries.keys():
-            print(summaries[i])
+            #print(summaries[i])
             s.append(summaries[i])
             
-    print("Number of communities used:",len(s))
+    print("\nNumber of community summaries used for response:",len(s),"\n")
 
     summaries_str = "\n\n".join(s)
 
@@ -147,6 +156,9 @@ def retriever(question: str):
                     Community summaries:
                     {summaries_str}
                     """
+    
+    #print("Final data:")
+    #print(final_data)
     return final_data
 
 prompt = ChatPromptTemplate.from_messages(
@@ -158,7 +170,8 @@ prompt = ChatPromptTemplate.from_messages(
          in your response. The unstructured data shows the relevant text from the 
          documents which you should also consider when preparing your response.
          The community summaries show the summary of communities in which the entities are present, which
-         you should also consider in your response.:
+         you should also consider in your response. Also, cite historical precedents and events in support of your answer
+         whenever they are relevant:
         {context}
 
         Question: {question}
