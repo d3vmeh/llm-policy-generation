@@ -3,6 +3,18 @@ from graphdatascience.server_version.server_version import ServerVersion
 from querying import *
 from neo4j import GraphDatabase
 import pandas as pd
+from langchain_core.runnables import (
+    RunnableBranch,
+    RunnableLambda,
+    RunnableParallel,
+    RunnablePassthrough,
+)
+
+
+OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+NEO4J_URI = os.environ["NEO4J_URI"]
+NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
+NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
 
 gds = GraphDataScience(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
@@ -69,6 +81,59 @@ def get_triangle_count():
     """)
     return triangle_count
 
+def create_community_summary(community_components):
+    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
+    prompt = ChatPromptTemplate.from_messages(
+        [
+        ("system", "You are an experienced data analyst who is assisting the US government in consolidating foreign policy data."
+         "The data is stored in a list of components that are all related to each other." 
+         "You use natural language to summarize the data."), 
+        ("user", """
+        Only use the following list of components to summarize the data. Use natural language.
+        Only include the summary of the data in your response.
+
+        ===============================================================
+        Here is the data:
+
+        {components}
+        
+         
+        ===============================================================
+        {question}
+        
+        """
+        )
+        ]
+        )
+    
+    chain = (
+         {"components": lambda x: community_components, "question": RunnablePassthrough()}
+         | prompt
+         | llm
+         | StrOutputParser()
+    )
+    q = """Put your BRIEF summary below and include a title that is SPECIFIC only to the data in this summary as well. 
+            The summary title should not be generic or broad like 'US Foriegn Policy', 
+            it should focus on specific details and items mentioned in the data.
+            These items can be names of people, countries, concepts, policies, etc..
+            Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details
+            Put your summary and title here:"""
+    summary = chain.invoke(q)
+    return summary
+
+def get_community_id(node_id: str) -> str:
+    response = gds.run_cypher(
+        f"""
+        MATCH (n) WHERE n.id = "{node_id}"
+        RETURN n.community AS communityId
+        """
+    )
+    r = response['communityId'][0]
+    print(node_id, r)
+    #if response:
+    return response['communityId'][0]
+    #return 0
+
 
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
 gds.graph.drop("myGraph")
@@ -78,7 +143,7 @@ graph_projection = create_graph_projection()
 
 
 
-graph = Neo4jGraph()
+# graph = Neo4jGraph()
 G = gds.graph.get("myGraph")
 
 
@@ -118,13 +183,13 @@ gds.run_cypher(
 )
 
 clustering_coefficients = get_local_clustering_coefficients()
-print(clustering_coefficients,'\n')
+#print(clustering_coefficients,'\n')
 
 node_popularity = get_node_popularity()
-print(node_popularity,'\n')
+#print(node_popularity,'\n')
 
 triangle_count = get_triangle_count()
-print(triangle_count,'\n')
+#print(triangle_count,'\n')
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph', 'community')
@@ -145,13 +210,49 @@ print(communities)
 
 all_community_components = []
 community_summaries = []
-for c in communities:
-    c_components = communities['comp'].to_list()[0]
-    all_community_components.append(c_components)
+print("Number of communities:",len(communities.index))
+count = 0
+for x in range(len(communities.index)):
+    c = communities.iloc[x]['comp']
+    #c_components = c['comp'].to_list()
+    #print(c_components)
+    all_community_components.append(c)
+    count += 1
 
-print(all_community_components[0][:10])
+print("Count:",count)
+#f = open("community_summaries.txt",'w', encoding="utf-8")
+
+summaries = {}
+#print(all_community_components)
+community_ids = communities['community'].to_list()
+print(community_ids)
+for i in range(len(all_community_components)):
+    print(i)
+    converted_string = ", ".join(str(x) for x in all_community_components[i])
+    #print(converted_string)
+    s = create_community_summary(converted_string)
+    #c = get_community_id(all_community_components[i][0])
+    summaries[community_ids[i]] = s
+    print(s)
 
 
+    #print("\n=============================================\n")
+    #print(s)
+    #print("=============================================\n\n")
+    #try:
+    #    f.write(s)
+    #except:
+    #    print("Error writing to file")
+    #    continue
+
+
+
+
+
+
+
+#f.close()
+#print("Completed")
 # smallest_community_query = """
 #     CALL gds.graph.nodeProperties.stream('myGraph', 'community')
 #     YIELD nodeId, propertyValue

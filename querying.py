@@ -19,8 +19,9 @@ from langchain_core.runnables import (
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import ConfigurableField
 import pdb
-
 import os
+
+from create_communities import create_community_summary, get_community_id, summaries
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
@@ -86,28 +87,65 @@ def structured_retriever(question: str) -> str:
             CALL {
               WITH node
               MATCH (node)-[r:!MENTIONS]->(neighbor)
-              RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS output
+              RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id AS output, node.id AS nodeId, neighbor.id AS neighborId
               UNION ALL
               WITH node
               MATCH (node)<-[r:!MENTIONS]-(neighbor)
-              RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output
+              RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output, node.id AS nodeId, neighbor.id AS neighborId
             }
-            RETURN output LIMIT 50
+            RETURN output, nodeId, neighborId LIMIT 100
             """,
             {"query": generate_full_text_query(entity)},
         )
+        nodes= []
+        for n in response:
+            node = n['nodeId']
+            if node not in nodes:
+                nodes.append(node)
+        #print(nodes)
+
+        neighbors = []
+        for e in response:
+            neighbor = e['neighborId']
+            if neighbor not in neighbors:
+                neighbors.append(neighbor)
+        #print(neighbors)
+
+
         result += "\n".join([el['output'] for el in response])
-    return result
+    return result, nodes, neighbors
 
 def retriever(question: str):
     print(f"Search query: {question}")
-    structured_data = structured_retriever(question) #context from graph database - nodes, relationships
+    structured_data, related_nodes, neighbors = structured_retriever(question) #context from graph database - nodes, relationships
     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]  #context from graph database - text
+
+    community_ids = []
+    for node in related_nodes:
+        community_ids.append(get_community_id(node))
+    for neighbor in neighbors:
+        community_ids.append(get_community_id(neighbor))
+    
+    print(community_ids)
+
+    s = []
+    for i in community_ids:
+        if i != None and i in summaries.keys():
+            print(summaries[i])
+            s.append(summaries[i])
+            
+    print("Number of communities used:",len(s))
+
+    summaries_str = "\n\n".join(s)
+
     final_data = f"""Structured data:
                     {structured_data}
 
                     Unstructured data:
                     {"#Document ". join(unstructured_data)}
+
+                    Community summaries:
+                    {summaries_str}
                     """
     return final_data
 
@@ -117,8 +155,10 @@ prompt = ChatPromptTemplate.from_messages(
          "to answer questions based on structured and unstructured data. You are thoughtful and thorough in your responses."),
         ("user", """
         Answer the question based only on the following context. The structured data shows major entities and their relationships which you should consider 
-         in your respons. The unstructured data shows the relevant text from the 
-         documents which you should also consider when preparing your response:
+         in your response. The unstructured data shows the relevant text from the 
+         documents which you should also consider when preparing your response.
+         The community summaries show the summary of communities in which the entities are present, which
+         you should also consider in your response.:
         {context}
 
         Question: {question}

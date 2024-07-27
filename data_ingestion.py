@@ -27,11 +27,11 @@ def load_documents():
         path = os.path.join("text_documents/", f)
         f = open(path, "r", encoding="utf-8")
         text = f.read()
-        text_split = text.split("References")
-        print(len(text_split))
-        text = ""
-        for t in text_split[:len(text_split)-1]:
-            text += t
+        # text_split = text.split("References")
+        # print(len(text_split))
+        # text = ""
+        # for t in text_split[:len(text_split)-1]:
+        #     text += t
 
         
         document = Document(text)
@@ -40,9 +40,9 @@ def load_documents():
 
     print("Loading PDFs")
     
-    #doc_loader = PyPDFDirectoryLoader("PDFs/")
-    #docs = doc_loader.load()
-    #documents += docs
+    doc_loader = PyPDFDirectoryLoader("PDFs/")
+    docs = doc_loader.load()
+    documents += docs
     print("Loaded documents")
     return documents
 
