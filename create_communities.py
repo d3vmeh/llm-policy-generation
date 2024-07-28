@@ -10,6 +10,8 @@ from langchain_core.runnables import (
     RunnablePassthrough,
 )
 import pickle
+import os
+
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
@@ -43,20 +45,46 @@ with driver.session() as session:
 node_projection = {label: {} for label in node_labels}  # Assuming no properties to include
 relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type in relationship_types}  # Assuming no properties to include
 
-def create_graph_projection():
+def create_graph_projection(graphName="testgraph0"):
     print("Creating graph projection")
     graph_projection = gds.graph.project(
-    "myGraph",
+    graphName,
     node_projection,
     relationship_projection,
     )
     print("Graph projection created")
     print("=============================================")
+
+    """If getting not enough heap space error, run this in neo4j. It will generate
+    a graph named testgraph0. Set the total nodes at the top and make sure it is equal
+    to the batch size to avoid generating subgraphs:
+    
+    WITH 12297 AS totalNodes, 12297 AS batchSize
+    UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
+    CALL {
+        WITH batchStart, batchSize
+        MATCH (n)
+        WHERE id(n) >= batchStart AND id(n) < batchStart + batchSize
+        RETURN collect(id(n)) AS batchNodeIds
+    }
+    WITH batchNodeIds, batchStart
+    CALL gds.graph.project.cypher(
+        'testgraph' + batchStart,
+        'MATCH (n) WHERE id(n) IN $batchNodeIds RETURN id(n) AS id',
+        'MATCH (n)-[r]->(m) WHERE id(n) IN $batchNodeIds AND id(m) IN $batchNodeIds RETURN id(n) AS source, id(m) AS target',
+        { parameters: { batchNodeIds: batchNodeIds } }
+    )
+    YIELD graphName AS graph, nodeCount AS nodes, relationshipCount AS rels
+    RETURN graph, nodes, rels;
+    """
+
+
+
     return graph_projection
 
 def get_local_clustering_coefficients():
     clustering_coefficients = gds.run_cypher("""
-        CALL gds.localClusteringCoefficient.stream('myGraph')
+        CALL gds.localClusteringCoefficient.stream('testgraph0')
         YIELD nodeId, localClusteringCoefficient
         RETURN gds.util.asNode(nodeId).id AS name, localClusteringCoefficient
         ORDER BY localClusteringCoefficient DESC
@@ -65,7 +93,7 @@ def get_local_clustering_coefficients():
 
 def get_node_popularity():
     popularity = gds.run_cypher("""
-        CALL gds.degree.stream('myGraph')
+        CALL gds.degree.stream('testgraph0')
         YIELD nodeId, score
         RETURN gds.util.asNode(nodeId).id AS name, score AS popularity
         ORDER BY popularity DESC            
@@ -74,7 +102,7 @@ def get_node_popularity():
 
 def get_triangle_count():
     triangle_count = gds.run_cypher("""
-        CALL gds.triangleCount.stream('myGraph')
+        CALL gds.triangleCount.stream('testgraph0')
         YIELD nodeId, triangleCount
         RETURN gds.util.asNode(nodeId).id AS name, triangleCount
         ORDER BY triangleCount DESC
@@ -140,11 +168,11 @@ def get_community_id(node_id: str) -> str:
 
 #graph_projection = create_graph_projection()
 
-
+graphName = "testgraph0"
 
 
 # graph = Neo4jGraph()
-G = gds.graph.get("myGraph")
+G = gds.graph.get(graphName)
 
 
 # print("Searching for weakly connected components")
@@ -163,9 +191,9 @@ G = gds.graph.get("myGraph")
 # print(result)
 # print("Components found:", result.componentCount)
 
-# #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
+#Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
 # query = """
-#     CALL gds.graph.nodeProperties.stream('myGraph', 'componentId')
+#     CALL gds.graph.nodeProperties.stream('testgraph0', 'componentId')
 #     YIELD nodeId, propertyValue
 #     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
 #     WITH componentId, collect(node) AS comp
@@ -177,7 +205,7 @@ G = gds.graph.get("myGraph")
 # print(components)
 
 # gds.run_cypher("""
-#     CALL gds.wcc.write('myGraph', { writeProperty: 'community' }) 
+#     CALL gds.wcc.write('testgraph0', { writeProperty: 'community' }) 
 #     YIELD nodePropertiesWritten, componentCount;
 # """)
 
@@ -193,17 +221,17 @@ G = gds.graph.get("myGraph")
 #     """
 # )
 
-clustering_coefficients = get_local_clustering_coefficients()
-print(clustering_coefficients,'\n')
+# clustering_coefficients = get_local_clustering_coefficients()
+# print(clustering_coefficients,'\n')
 
 node_popularity = get_node_popularity()
 print(node_popularity,'\n')
 
-triangle_count = get_triangle_count()
-print(triangle_count,'\n')
+# triangle_count = get_triangle_count()
+# print(triangle_count,'\n')
 
 community_query = """
-    CALL gds.graph.nodeProperties.stream('myGraph', 'community')
+    CALL gds.graph.nodeProperties.stream('testgraph0', 'community')
     YIELD nodeId, propertyValue
     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS community
     WITH community, collect(node) AS comp
@@ -236,8 +264,7 @@ print("Count:",count)
 summaries = {}
 #print(all_community_components)
 community_ids = communities['community'].to_list()
-
-# sizes = communities['componentSize'].to_list()
+sizes = communities['componentSize'].to_list()
 
 # for s in range(len(sizes)):
 #     if 1 < sizes[s] <= 3:
@@ -246,22 +273,22 @@ community_ids = communities['community'].to_list()
 #         print("\n")
 
 # #Uncomment when generating new summaries
-# for i in range(len(all_community_components)):
-#     #print(i)
-#     if sizes[i] > 1:
-#         converted_string = ", ".join(str(x) for x in all_community_components[i])
+for i in range(len(all_community_components)):
+    #print(i)
+    if sizes[i] > 1:
+        converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-#         #print(converted_string)
-#         s = create_community_summary(converted_string)
-#         #c = get_community_id(all_community_components[i][0])
-#         summaries[community_ids[i]] = s
-#         print(s)
-#     if sizes[i] <= 1:
-#         break
+        #print(converted_string)
+        s = create_community_summary(converted_string)
+        #c = get_community_id(all_community_components[i][0])
+        summaries[community_ids[i]] = s
+        print(s)
+    if sizes[i] <= 1:
+        break
 
-# with open("community_summaries.pkl",'wb') as file:
-#     pickle.dump(summaries, file)
-#     file.close()
+with open("community_summaries.pkl",'wb') as file:
+    pickle.dump(summaries, file)
+    file.close()
 
 with open('community_summaries.pkl', 'rb') as file: 
       
@@ -270,20 +297,4 @@ with open('community_summaries.pkl', 'rb') as file:
   
     print(f"Loaded all summaries. {len(summaries)} from file") 
 
-print(summaries[2247])
-#f.close()
-#print("Completed")
-# smallest_community_query = """
-#     CALL gds.graph.nodeProperties.stream('myGraph', 'community')
-#     YIELD nodeId, propertyValue
-#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS community
-#     WITH community, collect(node) AS comp
-#     WITH community, comp, size(comp) AS componentSize
-#     RETURN community, componentSize, comp
-#     ORDER BY componentSize ASC
-#     LIMIT 1
-# """
-# smallest_community = gds.run_cypher(smallest_community_query)
-# print("\nSmallest community:")
-# print(smallest_community)
 
