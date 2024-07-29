@@ -1,6 +1,5 @@
 from querying import *
 import sys
-from create_communities import community_summaries
 
 
 print(graph)

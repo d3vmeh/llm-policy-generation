@@ -192,6 +192,10 @@ G = gds.graph.get(graphName)
 # print("Components found:", result.componentCount)
 
 #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
+"""
+Run to generate communities
+"""
+
 # query = """
 #     CALL gds.graph.nodeProperties.stream('testgraph0', 'componentId')
 #     YIELD nodeId, propertyValue
@@ -246,49 +250,57 @@ print(communities)
     #print(c['componentId'])
 
 
+"""
+Uncomment when generating new community summaries
+"""
 
-all_community_components = []
-community_summaries = []
-print("Number of communities:",len(communities.index))
-count = 0
-for x in range(len(communities.index)):
-    c = communities.iloc[x]['comp']
-    #c_components = c['comp'].to_list()
-    #print(c_components)
-    all_community_components.append(c)
-    count += 1
+# all_community_components = []
+# community_summaries = []
+# print("Number of communities:",len(communities.index))
+# count = 0
+# for x in range(len(communities.index)):
+#     c = communities.iloc[x]['comp']
+#     #c_components = c['comp'].to_list()
+#     #print(c_components)
+#     all_community_components.append(c)
+#     count += 1
 
-print("Count:",count)
-#f = open("community_summaries.txt",'w', encoding="utf-8")
+# print("Count:",count)
+# #f = open("community_summaries.txt",'w', encoding="utf-8")
 
-summaries = {}
-#print(all_community_components)
-community_ids = communities['community'].to_list()
-sizes = communities['componentSize'].to_list()
+# summaries = {}
+# #print(all_community_components)
+# community_ids = communities['community'].to_list()
+# sizes = communities['componentSize'].to_list()
 
+# total = 0
 # for s in range(len(sizes)):
-#     if 1 < sizes[s] <= 3:
-#         print("Community ID:",community_ids[s],"Size:",sizes[s])
-#         print(all_community_components[s])
-#         print("\n")
+#     if sizes[s] > 1:
+#         total += 1
+# print(f"There will be {total} community summaries generated")
 
-# #Uncomment when generating new summaries
-for i in range(len(all_community_components)):
-    #print(i)
-    if sizes[i] > 1:
-        converted_string = ", ".join(str(x) for x in all_community_components[i])
+# count = 0
+# for i in range(len(all_community_components)):
+#     #print(i)
+#     if sizes[i] > 1:
+#         converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-        #print(converted_string)
-        s = create_community_summary(converted_string)
-        #c = get_community_id(all_community_components[i][0])
-        summaries[community_ids[i]] = s
-        print(s)
-    if sizes[i] <= 1:
-        break
+#         #print(converted_string)
+#         s = create_community_summary(converted_string)
+#         #c = get_community_id(all_community_components[i][0])
+#         summaries[community_ids[i]] = s
+#         print(s)
+#         print(f"\n{count}/{total} community summaries generated\n")
+#         count += 1
+#     if sizes[i] <= 1:
+#         break
 
-with open("community_summaries.pkl",'wb') as file:
-    pickle.dump(summaries, file)
-    file.close()
+# print(count," community summaries generated")
+
+
+# with open("community_summaries.pkl",'wb') as file:
+#     pickle.dump(summaries, file)
+#     file.close()
 
 with open('community_summaries.pkl', 'rb') as file: 
       
