@@ -138,10 +138,12 @@ def retriever(question: str):
     print(community_ids)
 
     s = []
+    used = []
     for i in community_ids:
-        if i != None and i in summaries.keys():
+        if i != None and i in summaries.keys() and i not in used:
             #print(summaries[i])
             s.append(summaries[i])
+            used.append(i)
             
     print("\nNumber of community summaries used for response:",len(s),"\n")
 

@@ -307,6 +307,6 @@ with open('community_summaries.pkl', 'rb') as file:
     # Call load method to deserialze 
     summaries = pickle.load(file) 
   
-    print(f"Loaded all summaries. {len(summaries)} from file") 
+print(f"Loaded all summaries. {len(summaries)} from file") 
 
 
