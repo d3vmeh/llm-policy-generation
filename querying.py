@@ -159,8 +159,8 @@ def retriever(question: str):
                     {summaries_str}
                     """
     
-    #print("Final data:")
-    #print(final_data)
+    print("Final data:")
+    print(final_data)
     return final_data
 
 prompt = ChatPromptTemplate.from_messages(

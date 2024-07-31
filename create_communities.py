@@ -140,8 +140,8 @@ def create_community_summary(community_components):
          | llm
          | StrOutputParser()
     )
-    q = """Put your BRIEF summary below and include a title that is SPECIFIC only to the data in this summary as well. 
-            The summary title should not be generic or broad like 'US Foriegn Policy', 
+    q = """Put your detailed and thorough summary below and include a title that is SPECIFIC only to the data in this summary as well. 
+            The summary title should not be generic or broad like 'US Foreign Policy' or 'US Relations with China', 
             it should focus on specific details and items mentioned in the data.
             These items can be names of people, countries, concepts, policies, etc..
             Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details
@@ -250,34 +250,62 @@ print(communities)
     #print(c['componentId'])
 
 
+
+
+all_community_components = []
+community_summaries = []
+print("Number of communities:",len(communities.index))
+count = 0
+for x in range(len(communities.index)):
+    c = communities.iloc[x]['comp']
+    #c_components = c['comp'].to_list()
+    #print(c_components)
+    all_community_components.append(c)
+    count += 1
+
+print("Count:",count)
+#f = open("community_summaries.txt",'w', encoding="utf-8")
+
+summaries = {}
+#print(all_community_components)
+community_ids = communities['community'].to_list()
+sizes = communities['componentSize'].to_list()
+components = communities['comp'].to_list()
+
+total = 0
+single_node_communities = 0
+double_node_communities = 0
+triple_node_communities = 0
+quad_node_communities = 0
+c = 0
+for s in range(len(sizes)):
+    if sizes[s] == 1:
+        single_node_communities += 1
+    else:
+        total += 1
+        
+        if sizes[s] == 2:
+            print(components[s])
+            double_node_communities += 1
+        if sizes[s] == 3:
+            print(components[s])
+            triple_node_communities += 1
+        if 4<= sizes[s] < 25:
+            quad_node_communities += 1
+        else:
+            c += 1
+
+print("Single node communities:",single_node_communities)
+print("Double node communities:",double_node_communities)
+print("Triple node communities:",triple_node_communities)
+print("Quad node communities:",quad_node_communities)
+print("Communities with more than 25 nodes:",c)
+print(f"There will be {total} community summaries generated")
+
 """
 Uncomment when generating new community summaries
 """
 
-# all_community_components = []
-# community_summaries = []
-# print("Number of communities:",len(communities.index))
-# count = 0
-# for x in range(len(communities.index)):
-#     c = communities.iloc[x]['comp']
-#     #c_components = c['comp'].to_list()
-#     #print(c_components)
-#     all_community_components.append(c)
-#     count += 1
-
-# print("Count:",count)
-# #f = open("community_summaries.txt",'w', encoding="utf-8")
-
-# summaries = {}
-# #print(all_community_components)
-# community_ids = communities['community'].to_list()
-# sizes = communities['componentSize'].to_list()
-
-# total = 0
-# for s in range(len(sizes)):
-#     if sizes[s] > 1:
-#         total += 1
-# print(f"There will be {total} community summaries generated")
 
 # count = 0
 # for i in range(len(all_community_components)):
