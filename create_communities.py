@@ -254,23 +254,21 @@ print(communities)
 
 all_community_components = []
 community_summaries = []
-print("Number of communities:",len(communities.index))
-count = 0
-for x in range(len(communities.index)):
-    c = communities.iloc[x]['comp']
-    #c_components = c['comp'].to_list()
-    #print(c_components)
-    all_community_components.append(c)
-    count += 1
+# print("Number of communities:",len(communities.index))
+# count = 0
+# for x in range(len(communities.index)):
+#     c = communities.iloc[x]['comp']
+#     #c_components = c['comp'].to_list()
+#     #print(c_components)
+#     all_community_components.append(c)
+#     count += 1
 
-print("Count:",count)
-#f = open("community_summaries.txt",'w', encoding="utf-8")
-
-summaries = {}
-#print(all_community_components)
+all_community_components = communities['comp'].to_list()
 community_ids = communities['community'].to_list()
 sizes = communities['componentSize'].to_list()
-components = communities['comp'].to_list()
+
+summaries = {}
+
 
 total = 0
 single_node_communities = 0
@@ -285,10 +283,8 @@ for s in range(len(sizes)):
         total += 1
         
         if sizes[s] == 2:
-            print(components[s])
             double_node_communities += 1
         if sizes[s] == 3:
-            print(components[s])
             triple_node_communities += 1
         if 4<= sizes[s] < 25:
             quad_node_communities += 1
@@ -299,7 +295,7 @@ print("Single node communities:",single_node_communities)
 print("Double node communities:",double_node_communities)
 print("Triple node communities:",triple_node_communities)
 print("Quad node communities:",quad_node_communities)
-print("Communities with more than 25 nodes:",c)
+print("Communities between 4 and 25 nodes:",c)
 print(f"There will be {total} community summaries generated")
 
 """

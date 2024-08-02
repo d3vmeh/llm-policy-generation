@@ -159,19 +159,19 @@ def retriever(question: str):
                     {summaries_str}
                     """
     
-    print("Final data:")
-    print(final_data)
+    #print("Final data:")
+    #print(final_data)
     return final_data
 
 prompt = ChatPromptTemplate.from_messages(
         [
         ("system", "You are an experienced advisor and international diplomat who is assisting the US government in foreign policy. You use natural language "
-         "to answer questions based on structured and unstructured data. You are thoughtful and thorough in your responses."),
+         "to answer questions based on structured data, unstructured data, and community summaries. You are thoughtful and thorough in your responses."),
         ("user", """
         Answer the question based only on the following context. The structured data shows major entities and their relationships which you should consider 
          in your response. The unstructured data shows the relevant text from the 
          documents which you should also consider when preparing your response.
-         The community summaries show the summary of communities in which the entities are present, which
+         The community summaries show the summary of communities in which closely related entities are present, which
          you should also consider in your response. Also, cite historical precedents and events in support of your answer
          whenever they are relevant:
         {context}
@@ -183,7 +183,7 @@ prompt = ChatPromptTemplate.from_messages(
         ]
         )
 
-llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.7)
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
