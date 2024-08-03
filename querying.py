@@ -21,7 +21,7 @@ from langchain_core.runnables import ConfigurableField
 import pdb
 import os
 
-from create_communities import create_community_summary, get_community_id, summaries
+from create_communities import get_community_id, summaries
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
@@ -126,8 +126,8 @@ def retriever(question: str):
     structured_data, related_nodes, neighbors = structured_retriever(question) #context from graph database - nodes, relationships
     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]  #context from graph database - text
 
-    print(related_nodes)
-    print(neighbors)
+    #print(related_nodes)
+    #print(neighbors)
     community_ids = []
     for node in related_nodes:
         #print("Node:",node)
