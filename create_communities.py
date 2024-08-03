@@ -166,13 +166,21 @@ def get_community_id(node_id: str) -> str:
     return response['communityId'][0]
     #return 0
 
+def load_summaries():
+    with open('community_summaries.pkl', 'rb') as file: 
+        # Call load method to deserialze 
+        summaries = pickle.load(file) 
+    
+    print(f"Loaded all summaries. {len(summaries)} from file")
+    return summaries
+
+
 graphName = "myGraph0"
 
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
 #gds.graph.drop("myGraph0")
 
 #graph_projection = create_graph_projection()
-
 
 # graph = Neo4jGraph()
 G = gds.graph.get(graphName)
@@ -217,7 +225,7 @@ Run to generate communities
 # """)
 
 
-#gds.louvain.mutate(G, mutateProperty="community")
+# gds.louvain.mutate(G, mutateProperty="community")
 
 print(gds.graph.nodeProperties.write(G, ["community"]))
 
@@ -303,11 +311,18 @@ Uncomment when generating new community summaries
 #     pickle.dump(summaries, file)
 #     file.close()
 
-with open('community_summaries.pkl', 'rb') as file: 
+
+"""
+Loading Summaries
+"""
+
+
+
+# with open('community_summaries.pkl', 'rb') as file: 
       
-    # Call load method to deserialze 
-    summaries = pickle.load(file) 
+#     # Call load method to deserialze 
+#     summaries = pickle.load(file) 
   
-print(f"Loaded all summaries. {len(summaries)} from file") 
+# print(f"Loaded all summaries. {len(summaries)} from file") 
 
 

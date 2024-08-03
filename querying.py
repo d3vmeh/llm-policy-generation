@@ -1,4 +1,3 @@
-# Extract entities from text
 from typing import Tuple, List, Optional
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -21,15 +20,15 @@ from langchain_core.runnables import ConfigurableField
 import pdb
 import os
 
-from create_communities import get_community_id, summaries
+from create_communities import get_community_id, load_summaries
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
 NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
-#breakpoint()
 
+summaries = load_summaries()
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
 graph = Neo4jGraph()
 
@@ -84,6 +83,7 @@ def structured_retriever(question: str) -> str:
     neighbors = []
     entities = entity_chain.invoke({"question": question})
     for entity in entities.names:
+        print(entities.names)
         response = graph.query(
             """CALL db.index.fulltext.queryNodes('entity', $query, {limit:2})
             YIELD node,score
@@ -96,7 +96,7 @@ def structured_retriever(question: str) -> str:
               MATCH (node)<-[r:!MENTIONS]-(neighbor)
               RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output, node.id AS nodeId, neighbor.id AS neighborId
             }
-            RETURN output, nodeId, neighborId LIMIT 100
+            RETURN output, nodeId, neighborId LIMIT 200
             """,
             {"query": generate_full_text_query(entity)},
         )
@@ -105,19 +105,20 @@ def structured_retriever(question: str) -> str:
             node = n['nodeId']
             if node not in nodes:
                 nodes.append(node)
-        #print("Nodes:",nodes)
+        
 
         
         for e in response:
             neighbor = e['neighborId']
             if neighbor not in neighbors:
                 neighbors.append(neighbor)
-        #print("Neighbors:",neighbors)
+        
 
         
 
         result += "\n".join([el['output'] for el in response])
-
+    print("Nodes:",nodes)
+    print("Neighbors:",neighbors)
     #print("Returning:",nodes,neighbors)
     return result, nodes, neighbors
 
@@ -125,7 +126,7 @@ def retriever(question: str):
     print(f"Search query: {question}")
     structured_data, related_nodes, neighbors = structured_retriever(question) #context from graph database - nodes, relationships
     unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]  #context from graph database - text
-
+    print(structured_data)
     #print(related_nodes)
     #print(neighbors)
     community_ids = []
@@ -135,7 +136,7 @@ def retriever(question: str):
     for neighbor in neighbors:
         community_ids.append(get_community_id(neighbor))
     
-    print(community_ids)
+    #print(community_ids)
 
     s = []
     used = []
@@ -158,7 +159,7 @@ def retriever(question: str):
                     Community summaries:
                     {summaries_str}
                     """
-    
+    #print(structured_data)
     #print("Final data:")
     #print(final_data)
     return final_data
