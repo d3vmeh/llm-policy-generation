@@ -1,20 +1,14 @@
 from graphdatascience import GraphDataScience
 from graphdatascience.server_version.server_version import ServerVersion
-#from querying import *
 from neo4j import GraphDatabase
-import pandas as pd
-from langchain_core.runnables import (
-    RunnableBranch,
-    RunnableLambda,
-    RunnableParallel,
-    RunnablePassthrough,
-)
-import pickle
-import os
+
+from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
+import pickle
+import os
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
@@ -184,9 +178,9 @@ graphName = "myGraph0"
 G = gds.graph.get(graphName)
 
 
-print("Searching for weakly connected components")
-result = gds.wcc.mutate(G, mutateProperty = "componentId")
-print("Components found:", result.componentCount)
+# print("Searching for weakly connected components")
+# result = gds.wcc.mutate(G, mutateProperty = "componentId")
+# print("Components found:", result.componentCount)
 
 # print("Searching for strongly connected components")
 # result = gds.scc.mutate(G, mutateProperty = "componentId")
@@ -205,43 +199,30 @@ print("Components found:", result.componentCount)
 Run to generate communities
 """
 
-query = """
-    CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-    YIELD nodeId, propertyValue
-    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-    WITH componentId, collect(node) AS comp
-    WITH componentId, comp, size(comp) AS componentSize
-    RETURN componentId, componentSize, comp
-    ORDER BY componentSize DESC 
-"""
-components = gds.run_cypher(query)
-print(components)
+# query = """
+#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+#     YIELD nodeId, propertyValue
+#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+#     WITH componentId, collect(node) AS comp
+#     WITH componentId, comp, size(comp) AS componentSize
+#     RETURN componentId, componentSize, comp
+#     ORDER BY componentSize DESC 
+# """
+# components = gds.run_cypher(query)
+# print(components)
 
-gds.run_cypher("""
-    CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
-    YIELD nodePropertiesWritten, componentCount;
-""")
+# gds.run_cypher("""
+#     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
+#     YIELD nodePropertiesWritten, componentCount;
+# """)
 
 
-gds.louvain.mutate(G, mutateProperty="community")
+#gds.louvain.mutate(G, mutateProperty="community")
 
 print(gds.graph.nodeProperties.write(G, ["community"]))
 
-# gds.run_cypher(
-#     """
-#     MATCH (n) WHERE 'louvainCommunityId' IN keys(n) 
-#     RETURN n.name, n.louvainCommunityId LIMIT 10
-#     """
-# )
-
-# clustering_coefficients = get_local_clustering_coefficients()
-# print(clustering_coefficients,'\n')
-
 node_popularity = get_node_popularity()
 print(node_popularity,'\n')
-
-# triangle_count = get_triangle_count()
-# print(triangle_count,'\n')
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph0', 'community')
@@ -255,22 +236,9 @@ community_query = """
 communities = gds.run_cypher(community_query)
 print("\nCommunities:")
 print(communities)
-#for c in largest_communities:
-    #print(c['componentId'])
-
-
-
 
 all_community_components = []
 community_summaries = []
-# print("Number of communities:",len(communities.index))
-# count = 0
-# for x in range(len(communities.index)):
-#     c = communities.iloc[x]['comp']
-#     #c_components = c['comp'].to_list()
-#     #print(c_components)
-#     all_community_components.append(c)
-#     count += 1
 
 all_community_components = communities['comp'].to_list()
 community_ids = communities['community'].to_list()
@@ -312,28 +280,28 @@ Uncomment when generating new community summaries
 """
 
 
-count = 0
-for i in range(len(all_community_components)):
-    #print(i)
-    if sizes[i] > 1:
-        converted_string = ", ".join(str(x) for x in all_community_components[i])
+# count = 0
+# for i in range(len(all_community_components)):
+#     #print(i)
+#     if sizes[i] > 1:
+#         converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-        #print(converted_string)
-        s = create_community_summary(converted_string)
-        #c = get_community_id(all_community_components[i][0])
-        summaries[community_ids[i]] = s
-        print(s)
-        print(f"\n{count}/{total} community summaries generated\n")
-        count += 1
-    if sizes[i] <= 1:
-        break
+#         #print(converted_string)
+#         s = create_community_summary(converted_string)
+#         #c = get_community_id(all_community_components[i][0])
+#         summaries[community_ids[i]] = s
+#         print(s)
+#         print(f"\n{count}/{total} community summaries generated\n")
+#         count += 1
+#     if sizes[i] <= 1:
+#         break
 
-print(count," community summaries generated")
+# print(count," community summaries generated")
 
 
-with open("community_summaries.pkl",'wb') as file:
-    pickle.dump(summaries, file)
-    file.close()
+# with open("community_summaries.pkl",'wb') as file:
+#     pickle.dump(summaries, file)
+#     file.close()
 
 with open('community_summaries.pkl', 'rb') as file: 
       
