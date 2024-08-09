@@ -24,7 +24,6 @@ while True:
     q = input("Enter a query: ")
     print("\n")
     print(structured_retriever(q, graph))
-    print("\n")
     print(chain.invoke({"question": q}))
     print("\n\n")
 
