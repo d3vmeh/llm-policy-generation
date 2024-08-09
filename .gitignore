@@ -1,0 +1,9 @@
+__pycache__/
+graphs/
+text_documents/
+database_tools.py
+policy_drafts.txt
+PDFs/
+community_summaries.txt
+already_saved/
+community_summaries.pkl
