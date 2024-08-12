@@ -194,6 +194,55 @@ def load_summaries():
     print(f"Loaded all summaries. {len(summaries)} from file")
     return summaries
 
+from neo4j import GraphDatabase
+
+# Connect to Neo4j
+
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+
+
+#Drop non-undirected relationships
+def drop_relationship_types():
+    with driver.session() as session:
+        result = session.run("""
+            CALL db.relationshipTypes() YIELD relationshipType
+            RETURN collect(relationshipType) AS allRelTypes
+        """)
+        all_rel_types = result.single()["allRelTypes"]
+        
+        #Filter out '_UNDIRECTED' and drop relationships
+        for r_type in all_rel_types:
+            if not r_type.endswith('_UNDIRECTED'):
+                session.run("""
+                    CALL gds.graph.relationships.drop(
+                        'myGraph0',
+                        $relationshipType
+                    )
+                """, parameters={"relationshipType": r_type})
+                print(f"Dropped relationship type: {r_type}")
+
+def print_relationship_types():
+    with driver.session() as session:
+        # Query to get all relationship types in the graph projection
+        query = """
+        CALL gds.graph.list() YIELD graphName
+        WHERE graphName = 'myGraph0'
+        CALL gds.graph.relationships.stream(graphName)
+        YIELD relationshipType
+        RETURN DISTINCT relationshipType
+        """
+        result = session.run(query)
+        
+        count = 0
+        for record in result:
+            #print(f"Relationship Type: {record['relationshipType']}")
+            count += 1
+        print(count, "relationship types found")
+
+#print_relationship_types()
+#driver.close()
+#drop_relationship_types()
+#driver.close()
 
 graphName = "myGraph0"
 
@@ -210,47 +259,36 @@ G = gds.graph.get(graphName)
 # result = gds.wcc.mutate(G, mutateProperty = "componentId")
 # print("Components found:", result.componentCount)
 
-# print("Searching for strongly connected components")
-# result = gds.scc.mutate(G, mutateProperty = "componentId")
-# print("Components found:", result.componentCount)
-
-
-
-
-# print("Searching for strongly connected components")
-# result = gds.scc.stream(G)
-# print(result)
-# print("Components found:", result.componentCount)
 
 #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
 """
 Run to generate communities
 """
 
-query = """
-    CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-    YIELD nodeId, propertyValue
-    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-    WITH componentId, collect(node) AS comp
-    WITH componentId, comp, size(comp) AS componentSize
-    RETURN componentId, componentSize, comp
-    ORDER BY componentSize DESC 
-"""
-components = gds.run_cypher(query)
-print(components)
+# query = """
+#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+#     YIELD nodeId, propertyValue
+#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+#     WITH componentId, collect(node) AS comp
+#     WITH componentId, comp, size(comp) AS componentSize
+#     RETURN componentId, componentSize, comp
+#     ORDER BY componentSize DESC 
+# """
+# components = gds.run_cypher(query)
+# print(components)
 
-# gds.run_cypher("""
-#     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
-#     YIELD nodePropertiesWritten, componentCount;
-# """)
+# # gds.run_cypher("""
+# #     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
+# #     YIELD nodePropertiesWritten, componentCount;
+# # """)
 
-gds.leiden.mutate(G, mutateProperty="community")
-# gds.louvain.mutate(G, mutateProperty="community")
+# gds.leiden.mutate(G, mutateProperty="community")
+# # gds.louvain.mutate(G, mutateProperty="community")
 
-print(gds.graph.nodeProperties.write(G, ["community"]))
+# print(gds.graph.nodeProperties.write(G, ["community"]))
 
-node_popularity = get_node_popularity()
-print(node_popularity,'\n')
+# node_popularity = get_node_popularity()
+# print(node_popularity,'\n')
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph0', 'community')
@@ -308,28 +346,28 @@ Uncomment when generating new community summaries
 """
 
 
-# count = 0
-# for i in range(len(all_community_components)):
-#     #print(i)
-#     if sizes[i] > 1:
-#         converted_string = ", ".join(str(x) for x in all_community_components[i])
+count = 0
+for i in range(len(all_community_components)):
+    #print(i)
+    if sizes[i] > 1:
+        converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-#         #print(converted_string)
-#         s = create_community_summary(converted_string)
-#         #c = get_community_id(all_community_components[i][0])
-#         summaries[community_ids[i]] = s
-#         print(s)
-#         print(f"\n{count}/{total} community summaries generated\n")
-#         count += 1
-#     if sizes[i] <= 1:
-#         break
+        #print(converted_string)
+        s = create_community_summary(converted_string)
+        #c = get_community_id(all_community_components[i][0])
+        summaries[community_ids[i]] = s
+        print(s)
+        print(f"\n{count}/{total} community summaries generated\n")
+        count += 1
+    if sizes[i] <= 1:
+        break
 
-# print(count," community summaries generated")
+print(count," community summaries generated")
 
 
-# with open("community_summaries.pkl",'wb') as file:
-#     pickle.dump(summaries, file)
-#     file.close()
+with open("community_summaries.pkl",'wb') as file:
+    pickle.dump(summaries, file)
+    file.close()
 
 
 """
@@ -338,11 +376,11 @@ Loading Summaries
 
 
 
-# with open('community_summaries.pkl', 'rb') as file: 
+with open('community_summaries.pkl', 'rb') as file: 
       
-#     # Call load method to deserialze 
-#     summaries = pickle.load(file) 
+    # Call load method to deserialze 
+    summaries = pickle.load(file) 
   
-# print(f"Loaded all summaries. {len(summaries)} from file") 
+print(f"Loaded all summaries. {len(summaries)} from file") 
 
 
