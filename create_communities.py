@@ -55,6 +55,8 @@ def create_graph_projection(graphName="myGraph0"):
     print("=============================================")
 
 
+    
+
 
 
 
@@ -63,7 +65,7 @@ def create_graph_projection(graphName="myGraph0"):
     a graph named myGraph0. Set the total nodes at the top and make sure it is equal
     to the batch size to avoid generating subgraphs:
     
-    WITH 12297 AS totalNodes, 12297 AS batchSize
+    WITH 31729 AS totalNodes, 31729 AS batchSize
     UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
     CALL {
         WITH batchStart, batchSize
@@ -75,15 +77,33 @@ def create_graph_projection(graphName="myGraph0"):
     CALL gds.graph.project.cypher(
         'myGraph' + batchStart,
         'MATCH (n) WHERE id(n) IN $batchNodeIds RETURN id(n) AS id',
-        'MATCH (n)-[r]->(m) WHERE id(n) IN $batchNodeIds AND id(m) IN $batchNodeIds RETURN id(n) AS source, id(m) AS target',
+        'MATCH (n)-[r]->(m) WHERE id(n) IN $batchNodeIds AND id(m) IN $batchNodeIds RETURN id(n) AS source, id(m) AS target, type(r) AS type',
         { parameters: { batchNodeIds: batchNodeIds }}
     )
     YIELD graphName AS graph, nodeCount AS nodes, relationshipCount AS rels
     RETURN graph, nodes, rels;
     """
 
+    """
+    Converting relationships in the graph projection to undirected
+    
+    CALL db.relationshipTypes() YIELD relationshipType
+    WITH collect(relationshipType) AS relationshipTypes
+    UNWIND relationshipTypes AS rType
+    CALL gds.graph.relationships.toUndirected(
+    'myGraph0',
+    {relationshipType: rType, mutateRelationshipType: rType + '_UNDIRECTED'}
+    )
+    YIELD inputRelationships, relationshipsWritten
+    RETURN rType, inputRelationships, relationshipsWritten
 
+    
+    
+    
+    
+    """
 
+    
     return graph_projection
 
 def get_local_clustering_coefficients():
@@ -207,24 +227,24 @@ G = gds.graph.get(graphName)
 Run to generate communities
 """
 
-# query = """
-#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-#     YIELD nodeId, propertyValue
-#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-#     WITH componentId, collect(node) AS comp
-#     WITH componentId, comp, size(comp) AS componentSize
-#     RETURN componentId, componentSize, comp
-#     ORDER BY componentSize DESC 
-# """
-# components = gds.run_cypher(query)
-# print(components)
+query = """
+    CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+    YIELD nodeId, propertyValue
+    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+    WITH componentId, collect(node) AS comp
+    WITH componentId, comp, size(comp) AS componentSize
+    RETURN componentId, componentSize, comp
+    ORDER BY componentSize DESC 
+"""
+components = gds.run_cypher(query)
+print(components)
 
 # gds.run_cypher("""
 #     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
 #     YIELD nodePropertiesWritten, componentCount;
 # """)
 
-
+gds.leiden.mutate(G, mutateProperty="community")
 # gds.louvain.mutate(G, mutateProperty="community")
 
 print(gds.graph.nodeProperties.write(G, ["community"]))
