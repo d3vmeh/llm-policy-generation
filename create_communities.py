@@ -44,27 +44,17 @@ relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type i
 
 def create_graph_projection(graphName="myGraph0"):
     print("Creating graph projection")
-    graph_projection = gds.graph.project(
-    graphName,
-    node_projection,
-    relationship_projection,
-    )
-
-
-    print("Graph projection created")
-    print("=============================================")
+    # graph_projection = gds.graph.project(
+    # graphName,
+    # node_projection,
+    # relationship_projection,
+    # )
 
 
     
 
 
-
-
-
-    """If getting not enough heap space error, run this in neo4j. It will generate
-    a graph named myGraph0. Set the total nodes at the top and make sure it is equal
-    to the batch size to avoid generating subgraphs:
-    
+    projection_query ="""
     WITH 31729 AS totalNodes, 31729 AS batchSize
     UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
     CALL {
@@ -84,27 +74,14 @@ def create_graph_projection(graphName="myGraph0"):
     RETURN graph, nodes, rels;
     """
 
-    """
-    Converting relationships in the graph projection to undirected
-    
-    CALL db.relationshipTypes() YIELD relationshipType
-    WITH collect(relationshipType) AS relationshipTypes
-    UNWIND relationshipTypes AS rType
-    CALL gds.graph.relationships.toUndirected(
-    'myGraph0',
-    {relationshipType: rType, mutateRelationshipType: rType + '_UNDIRECTED'}
-    )
-    YIELD inputRelationships, relationshipsWritten
-    RETURN rType, inputRelationships, relationshipsWritten
+    with driver.session() as session:
+        result = session.run(projection_query)
+        #return graph_projection
 
-    
-    
-    
-    
-    """
-
-    
-    return graph_projection
+    driver.close()
+    print("Graph projection created")
+    print("=============================================")
+    #return graph_projection
 
 def get_local_clustering_coefficients():
     clustering_coefficients = gds.run_cypher("""
@@ -201,6 +178,27 @@ from neo4j import GraphDatabase
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 
+def create_undirected_relationships():
+    create_undirected_relationships_query = """
+    
+    CALL db.relationshipTypes() YIELD relationshipType
+    WITH collect(relationshipType) AS relationshipTypes
+    UNWIND relationshipTypes AS rType
+    CALL gds.graph.relationships.toUndirected(
+    'myGraph0',
+    {relationshipType: rType, mutateRelationshipType: rType + '_UNDIRECTED'}
+    )
+    YIELD inputRelationships, relationshipsWritten
+    RETURN rType, inputRelationships, relationshipsWritten
+    """
+    with driver.session() as session:
+        result = session.run(create_undirected_relationships_query)
+        #for record in result:
+        #    print(f"Converted {record['inputRelationships']} relationships of type {record['rType']} to undirected relationships")
+    print("Undirected relationships created")
+
+
+
 #Drop non-undirected relationships
 def drop_relationship_types():
     with driver.session() as session:
@@ -220,6 +218,7 @@ def drop_relationship_types():
                     )
                 """, parameters={"relationshipType": r_type})
                 print(f"Dropped relationship type: {r_type}")
+    driver.close()
 
 def print_relationship_types():
     with driver.session() as session:
@@ -238,11 +237,12 @@ def print_relationship_types():
             #print(f"Relationship Type: {record['relationshipType']}")
             count += 1
         print(count, "relationship types found")
+    driver.close()
 
-#print_relationship_types()
-#driver.close()
-#drop_relationship_types()
-#driver.close()
+
+#create_graph_projection()
+create_undirected_relationships()
+drop_relationship_types()
 
 graphName = "myGraph0"
 
@@ -255,9 +255,9 @@ graphName = "myGraph0"
 G = gds.graph.get(graphName)
 
 
-# print("Searching for weakly connected components")
-# result = gds.wcc.mutate(G, mutateProperty = "componentId")
-# print("Components found:", result.componentCount)
+print("Searching for weakly connected components")
+result = gds.wcc.mutate(G, mutateProperty = "componentId")
+print("Components found:", result.componentCount)
 
 
 #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
@@ -265,30 +265,30 @@ G = gds.graph.get(graphName)
 Run to generate communities
 """
 
-# query = """
-#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-#     YIELD nodeId, propertyValue
-#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-#     WITH componentId, collect(node) AS comp
-#     WITH componentId, comp, size(comp) AS componentSize
-#     RETURN componentId, componentSize, comp
-#     ORDER BY componentSize DESC 
-# """
-# components = gds.run_cypher(query)
-# print(components)
+query = """
+    CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+    YIELD nodeId, propertyValue
+    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+    WITH componentId, collect(node) AS comp
+    WITH componentId, comp, size(comp) AS componentSize
+    RETURN componentId, componentSize, comp
+    ORDER BY componentSize DESC 
+"""
+components = gds.run_cypher(query)
+print(components)
 
-# # gds.run_cypher("""
-# #     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
-# #     YIELD nodePropertiesWritten, componentCount;
-# # """)
+# gds.run_cypher("""
+#     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
+#     YIELD nodePropertiesWritten, componentCount;
+# """)
 
-# gds.leiden.mutate(G, mutateProperty="community")
-# # gds.louvain.mutate(G, mutateProperty="community")
+gds.leiden.mutate(G, mutateProperty="community")
+# gds.louvain.mutate(G, mutateProperty="community")
 
-# print(gds.graph.nodeProperties.write(G, ["community"]))
+print(gds.graph.nodeProperties.write(G, ["community"]))
 
-# node_popularity = get_node_popularity()
-# print(node_popularity,'\n')
+node_popularity = get_node_popularity()
+print(node_popularity,'\n')
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph0', 'community')
