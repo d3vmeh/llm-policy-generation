@@ -114,7 +114,7 @@ def get_triangle_count():
 
 def create_community_summary(community_components):
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
-    llm = Ollama(model_name="llama3",temperature=0.5)
+    llm = Ollama(model="llama3",temperature=0.5)
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -182,6 +182,41 @@ from neo4j import GraphDatabase
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
+def create_communities_in_graph():
+    #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
+   
+    ## Adds componentId property to nodes as well
+    # print("Searching for weakly connected components")
+    # result = gds.wcc.mutate(G, mutateProperty = "componentId")
+    # print("Components found:", result.componentCount)
+
+    query = """
+        CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+        YIELD nodeId, propertyValue
+        WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+        WITH componentId, collect(node) AS comp
+        WITH componentId, comp, size(comp) AS componentSize
+        RETURN componentId, componentSize, comp
+        ORDER BY componentSize DESC 
+    """
+    components = gds.run_cypher(query)
+    print(components)
+
+    gds.run_cypher("""
+        CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
+        YIELD nodePropertiesWritten, componentCount;
+    """)
+
+    gds.leiden.mutate(G, mutateProperty="community")
+    # gds.louvain.mutate(G, mutateProperty="community")
+
+    print(gds.graph.nodeProperties.write(G, ["community"]))
+
+    print(get_node_popularity(),'\n')
+    print(get_local_clustering_coefficients(),'\n')
+    print(get_triangle_count(),'\n')
+
+
 
 def create_undirected_relationships():
     create_undirected_relationships_query = """
@@ -245,6 +280,9 @@ def print_relationship_types():
     driver.close()
 
 
+"""
+Uncomment to create graph projection and undirected relationships
+"""
 
 # create_graph_projection()
 # create_undirected_relationships()
@@ -255,49 +293,14 @@ graphName = "myGraph0"
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
 #gds.graph.drop("myGraph0")
 
-#graph_projection = create_graph_projection()
 
-# graph = Neo4jGraph()
 G = gds.graph.get(graphName)
 
-
-# print("Searching for weakly connected components")
-# result = gds.wcc.mutate(G, mutateProperty = "componentId")
-# print("Components found:", result.componentCount)
-
-
-
-#Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
 """
 Run to generate communities
 """
 
-# query = """
-#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-#     YIELD nodeId, propertyValue
-#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-#     WITH componentId, collect(node) AS comp
-#     WITH componentId, comp, size(comp) AS componentSize
-#     RETURN componentId, componentSize, comp
-#     ORDER BY componentSize DESC 
-# """
-# components = gds.run_cypher(query)
-# print(components)
-
-# gds.run_cypher("""
-#     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
-#     YIELD nodePropertiesWritten, componentCount;
-# """)
-
-# gds.leiden.mutate(G, mutateProperty="community")
-# # gds.louvain.mutate(G, mutateProperty="community")
-
-# print(gds.graph.nodeProperties.write(G, ["community"]))
-
-# print(get_node_popularity(),'\n')
-# print(get_local_clustering_coefficients(),'\n')
-# print(get_triangle_count(),'\n')
-
+#create_communities_in_graph()
 
 
 """
@@ -332,6 +335,7 @@ single_node_communities = 0
 double_node_communities = 0
 triple_node_communities = 0
 quad_node_communities = 0
+medium_communities = 0
 c = 0
 for s in range(len(sizes)):
 
@@ -345,16 +349,16 @@ for s in range(len(sizes)):
             double_node_communities += 1
         if sizes[s] == 3:
             triple_node_communities += 1
-        if 4<= sizes[s] < 25:
+        if sizes[s] == 4:
             quad_node_communities += 1
-        else:
-            c += 1
+        if 4<= sizes[s] < 25:
+            medium_communities += 1
 
 print("Single node communities:",single_node_communities)
 print("Double node communities:",double_node_communities)
 print("Triple node communities:",triple_node_communities)
 print("Quad node communities:",quad_node_communities)
-print("Communities between 4 and 25 nodes:",c)
+print("Communities between 4 and 25 nodes:",medium_communities)
 print(f"There will be {total} community summaries generated")
 
 """
@@ -362,28 +366,28 @@ Uncomment when generating new community summaries
 """
 
 
-# count = 0
-# for i in range(len(all_community_components)):
-#     #print(i)
-#     if sizes[i] > 1:
-#         converted_string = ", ".join(str(x) for x in all_community_components[i])
+count = 0
+for i in range(len(all_community_components)):
+    #print(i)
+    if sizes[i] > 1:
+        converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-#         #print(converted_string)
-#         s = create_community_summary(converted_string)
-#         #c = get_community_id(all_community_components[i][0])
-#         summaries[community_ids[i]] = s
-#         print(s)
-#         print(f"\n{count}/{total} community summaries generated\n")
-#         count += 1
-#     if sizes[i] <= 1:
-#         break
+        #print(converted_string)
+        s = create_community_summary(converted_string)
+        #c = get_community_id(all_community_components[i][0])
+        summaries[community_ids[i]] = s
+        print(s)
+        print(f"\n{count}/{total} community summaries generated\n")
+        count += 1
+    if sizes[i] <= 1:
+        break
 
-# print(count," community summaries generated")
+print(count," community summaries generated")
 
 
-# with open("community_summaries.pkl",'wb') as file:
-#     pickle.dump(summaries, file)
-#     file.close()
+with open("community_summaries.pkl",'wb') as file:
+    pickle.dump(summaries, file)
+    file.close()
 
 
 """
