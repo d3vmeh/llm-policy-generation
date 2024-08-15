@@ -2,6 +2,7 @@ from graphdatascience import GraphDataScience
 from graphdatascience.server_version.server_version import ServerVersion
 from neo4j import GraphDatabase
 
+from langchain_community.llms.ollama import Ollama
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -35,6 +36,7 @@ def get_node_labels_and_relationship_types(tx):
 
     return node_labels, relationship_types
 
+#driver.close()
 with driver.session() as session:
     node_labels, relationship_types = session.read_transaction(get_node_labels_and_relationship_types)
 
@@ -112,6 +114,8 @@ def get_triangle_count():
 
 def create_community_summary(community_components):
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
+    llm = Ollama(model_name="llama3",temperature=0.5)
+
     prompt = ChatPromptTemplate.from_messages(
         [
         ("system", "You are an experienced data analyst who is assisting the US government in consolidating foreign policy data."
@@ -142,7 +146,8 @@ def create_community_summary(community_components):
          | StrOutputParser()
     )
     q = """Put your detailed and thorough summary below and include a title that is SPECIFIC only to the data in this summary as well. 
-            The summary title should not be generic or broad like 'US Foreign Policy' or 'US Relations with China', 
+            The summary title should not be generic or broad like 'US Foreign Policy' or 'US Relations with China'. Do not use broad
+            term like 'foreign policy' or 'global relations'. The title should be specific to the data in the summary and
             it should focus on specific details and items mentioned in the data.
             These items can be names of people, countries, concepts, policies, etc..
             Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details
@@ -240,9 +245,10 @@ def print_relationship_types():
     driver.close()
 
 
-#create_graph_projection()
-create_undirected_relationships()
-drop_relationship_types()
+
+# create_graph_projection()
+# create_undirected_relationships()
+# drop_relationship_types()
 
 graphName = "myGraph0"
 
@@ -255,9 +261,10 @@ graphName = "myGraph0"
 G = gds.graph.get(graphName)
 
 
-print("Searching for weakly connected components")
-result = gds.wcc.mutate(G, mutateProperty = "componentId")
-print("Components found:", result.componentCount)
+# print("Searching for weakly connected components")
+# result = gds.wcc.mutate(G, mutateProperty = "componentId")
+# print("Components found:", result.componentCount)
+
 
 
 #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
@@ -265,30 +272,37 @@ print("Components found:", result.componentCount)
 Run to generate communities
 """
 
-query = """
-    CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-    YIELD nodeId, propertyValue
-    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-    WITH componentId, collect(node) AS comp
-    WITH componentId, comp, size(comp) AS componentSize
-    RETURN componentId, componentSize, comp
-    ORDER BY componentSize DESC 
-"""
-components = gds.run_cypher(query)
-print(components)
+# query = """
+#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+#     YIELD nodeId, propertyValue
+#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+#     WITH componentId, collect(node) AS comp
+#     WITH componentId, comp, size(comp) AS componentSize
+#     RETURN componentId, componentSize, comp
+#     ORDER BY componentSize DESC 
+# """
+# components = gds.run_cypher(query)
+# print(components)
 
 # gds.run_cypher("""
 #     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
 #     YIELD nodePropertiesWritten, componentCount;
 # """)
 
-gds.leiden.mutate(G, mutateProperty="community")
-# gds.louvain.mutate(G, mutateProperty="community")
+# gds.leiden.mutate(G, mutateProperty="community")
+# # gds.louvain.mutate(G, mutateProperty="community")
 
-print(gds.graph.nodeProperties.write(G, ["community"]))
+# print(gds.graph.nodeProperties.write(G, ["community"]))
 
-node_popularity = get_node_popularity()
-print(node_popularity,'\n')
+# print(get_node_popularity(),'\n')
+# print(get_local_clustering_coefficients(),'\n')
+# print(get_triangle_count(),'\n')
+
+
+
+"""
+For getting some info about community size, components, etc.
+"""
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph0', 'community')
@@ -320,6 +334,8 @@ triple_node_communities = 0
 quad_node_communities = 0
 c = 0
 for s in range(len(sizes)):
+
+    #Ignoring single node communities
     if sizes[s] == 1:
         single_node_communities += 1
     else:
@@ -346,35 +362,33 @@ Uncomment when generating new community summaries
 """
 
 
-count = 0
-for i in range(len(all_community_components)):
-    #print(i)
-    if sizes[i] > 1:
-        converted_string = ", ".join(str(x) for x in all_community_components[i])
+# count = 0
+# for i in range(len(all_community_components)):
+#     #print(i)
+#     if sizes[i] > 1:
+#         converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-        #print(converted_string)
-        s = create_community_summary(converted_string)
-        #c = get_community_id(all_community_components[i][0])
-        summaries[community_ids[i]] = s
-        print(s)
-        print(f"\n{count}/{total} community summaries generated\n")
-        count += 1
-    if sizes[i] <= 1:
-        break
+#         #print(converted_string)
+#         s = create_community_summary(converted_string)
+#         #c = get_community_id(all_community_components[i][0])
+#         summaries[community_ids[i]] = s
+#         print(s)
+#         print(f"\n{count}/{total} community summaries generated\n")
+#         count += 1
+#     if sizes[i] <= 1:
+#         break
 
-print(count," community summaries generated")
+# print(count," community summaries generated")
 
 
-with open("community_summaries.pkl",'wb') as file:
-    pickle.dump(summaries, file)
-    file.close()
+# with open("community_summaries.pkl",'wb') as file:
+#     pickle.dump(summaries, file)
+#     file.close()
 
 
 """
 Loading Summaries
 """
-
-
 
 with open('community_summaries.pkl', 'rb') as file: 
       

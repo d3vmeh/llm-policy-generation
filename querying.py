@@ -1,5 +1,5 @@
 from typing import Tuple, List, Optional
-
+from langchain_community.llms.ollama import Ollama
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
@@ -33,6 +33,7 @@ llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
 graph = Neo4jGraph()
 
 
+llm = Ollama(model_name="llama3",temperature=0.5)
 
 vector_index = Neo4jVector.from_existing_graph(
     OpenAIEmbeddings(),
@@ -185,6 +186,8 @@ prompt = ChatPromptTemplate.from_messages(
         )
 
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.7)
+llm = Ollama(model_name="llama3",temperature=0.7)
+
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
