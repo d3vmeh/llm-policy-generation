@@ -114,7 +114,7 @@ def get_triangle_count():
 
 def create_community_summary(community_components):
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
-    llm = Ollama(model="llama3",temperature=0.5)
+    llm = Ollama(model="llama3.1",temperature=0.5)
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -150,7 +150,9 @@ def create_community_summary(community_components):
             term like 'foreign policy' or 'global relations'. The title should be specific to the data in the summary and
             it should focus on specific details and items mentioned in the data.
             These items can be names of people, countries, concepts, policies, etc..
-            Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details
+            Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details.
+            Do not use bullet points.
+            You Must mention as many of the important components of the community as possible in the summary.
             Put your summary and title here:"""
     summary = chain.invoke(q)
     return summary
@@ -176,9 +178,7 @@ def load_summaries():
     print(f"Loaded all summaries. {len(summaries)} from file")
     return summaries
 
-from neo4j import GraphDatabase
 
-# Connect to Neo4j
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
@@ -186,9 +186,9 @@ def create_communities_in_graph():
     #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
    
     ## Adds componentId property to nodes as well
-    # print("Searching for weakly connected components")
-    # result = gds.wcc.mutate(G, mutateProperty = "componentId")
-    # print("Components found:", result.componentCount)
+    print("Searching for weakly connected components")
+    result = gds.wcc.mutate(G, mutateProperty = "componentId")
+    print("Components found:", result.componentCount)
 
     query = """
         CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
@@ -366,28 +366,28 @@ Uncomment when generating new community summaries
 """
 
 
-count = 0
-for i in range(len(all_community_components)):
-    #print(i)
-    if sizes[i] > 1:
-        converted_string = ", ".join(str(x) for x in all_community_components[i])
+# count = 0
+# for i in range(len(all_community_components)):
+#     #print(i)
+#     if sizes[i] > 1:
+#         converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-        #print(converted_string)
-        s = create_community_summary(converted_string)
-        #c = get_community_id(all_community_components[i][0])
-        summaries[community_ids[i]] = s
-        print(s)
-        print(f"\n{count}/{total} community summaries generated\n")
-        count += 1
-    if sizes[i] <= 1:
-        break
+#         #print(converted_string)
+#         s = create_community_summary(converted_string)
+#         #c = get_community_id(all_community_components[i][0])
+#         summaries[community_ids[i]] = s
+#         print(s)
+#         print(f"\n{count}/{total} community summaries generated\n")
+#         count += 1
+#     if sizes[i] <= 1:
+#         break
 
-print(count," community summaries generated")
+# print(count," community summaries generated")
 
 
-with open("community_summaries.pkl",'wb') as file:
-    pickle.dump(summaries, file)
-    file.close()
+# with open("community_summaries.pkl",'wb') as file:
+#     pickle.dump(summaries, file)
+#     file.close()
 
 
 """
