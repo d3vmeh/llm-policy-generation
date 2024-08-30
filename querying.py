@@ -20,6 +20,10 @@ from langchain_core.runnables import ConfigurableField
 import pdb
 import os
 
+
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+
 from create_communities import get_community_id, load_summaries
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -157,7 +161,16 @@ def retriever(question: str):
     #print(structured_data)
     #print("Final data:")
     #print(final_data)
+
+    create_wordcloud(final_data)
     return final_data
+
+def create_wordcloud(text):
+    word_cloud = WordCloud(collocations = False, background_color = 'white').generate(text)
+    plt.imshow(word_cloud, interpolation='bilinear')
+    plt.axis("off")
+    plt.show()
+
 
 prompt = ChatPromptTemplate.from_messages(
         [
