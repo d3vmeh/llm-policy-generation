@@ -21,8 +21,8 @@ import pdb
 import os
 
 
-import matplotlib.pyplot as plt
 from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 from create_communities import get_community_id, load_summaries
 
@@ -35,8 +35,7 @@ NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 summaries = load_summaries()
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
 graph = Neo4jGraph()
-
-
+wordcloud = None
 #llm = Ollama(model="llama3",temperature=0.5)
 
 vector_index = Neo4jVector.from_existing_graph(
@@ -161,15 +160,13 @@ def retriever(question: str):
     #print(structured_data)
     #print("Final data:")
     #print(final_data)
-
-    create_wordcloud(final_data)
+    wordcloud = create_wordcloud(final_data)
     return final_data
 
 def create_wordcloud(text):
     word_cloud = WordCloud(collocations = False, background_color = 'white').generate(text)
-    plt.imshow(word_cloud, interpolation='bilinear')
-    plt.axis("off")
-    plt.show()
+    word_cloud.to_file('wordcloud.png')
+    return word_cloud
 
 
 prompt = ChatPromptTemplate.from_messages(

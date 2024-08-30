@@ -4,6 +4,8 @@ import sys
 
 while True:
     q = input("\nEnter a query: ")
+    if q.lower() == "exit" or q.lower() == "q":
+        break
     print("\n")
     #print("Structured Data:")
     #print(structured_retriever(q))
@@ -20,3 +22,4 @@ while True:
     f.write("Response: \n" + response + "\n")
     f.write("=============================================")
     f.close()
+    
