@@ -2,6 +2,7 @@ from graphdatascience import GraphDataScience
 from graphdatascience.server_version.server_version import ServerVersion
 from neo4j import GraphDatabase
 
+from langchain_community.llms.ollama import Ollama
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -35,6 +36,7 @@ def get_node_labels_and_relationship_types(tx):
 
     return node_labels, relationship_types
 
+#driver.close()
 with driver.session() as session:
     node_labels, relationship_types = session.read_transaction(get_node_labels_and_relationship_types)
 
@@ -44,26 +46,18 @@ relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type i
 
 def create_graph_projection(graphName="myGraph0"):
     print("Creating graph projection")
-    graph_projection = gds.graph.project(
-    graphName,
-    node_projection,
-    relationship_projection,
-    )
+    # graph_projection = gds.graph.project(
+    # graphName,
+    # node_projection,
+    # relationship_projection,
+    # )
 
 
-    print("Graph projection created")
-    print("=============================================")
-
-
-
-
-
-
-    """If getting not enough heap space error, run this in neo4j. It will generate
-    a graph named myGraph0. Set the total nodes at the top and make sure it is equal
-    to the batch size to avoid generating subgraphs:
     
-    WITH 12297 AS totalNodes, 12297 AS batchSize
+
+
+    projection_query ="""
+    WITH 31729 AS totalNodes, 31729 AS batchSize
     UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
     CALL {
         WITH batchStart, batchSize
@@ -75,16 +69,21 @@ def create_graph_projection(graphName="myGraph0"):
     CALL gds.graph.project.cypher(
         'myGraph' + batchStart,
         'MATCH (n) WHERE id(n) IN $batchNodeIds RETURN id(n) AS id',
-        'MATCH (n)-[r]->(m) WHERE id(n) IN $batchNodeIds AND id(m) IN $batchNodeIds RETURN id(n) AS source, id(m) AS target',
+        'MATCH (n)-[r]->(m) WHERE id(n) IN $batchNodeIds AND id(m) IN $batchNodeIds RETURN id(n) AS source, id(m) AS target, type(r) AS type',
         { parameters: { batchNodeIds: batchNodeIds }}
     )
     YIELD graphName AS graph, nodeCount AS nodes, relationshipCount AS rels
     RETURN graph, nodes, rels;
     """
 
+    with driver.session() as session:
+        result = session.run(projection_query)
+        #return graph_projection
 
-
-    return graph_projection
+    driver.close()
+    print("Graph projection created")
+    print("=============================================")
+    #return graph_projection
 
 def get_local_clustering_coefficients():
     clustering_coefficients = gds.run_cypher("""
@@ -115,6 +114,8 @@ def get_triangle_count():
 
 def create_community_summary(community_components):
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
+    llm = Ollama(model="llama3.1",temperature=0.5)
+
     prompt = ChatPromptTemplate.from_messages(
         [
         ("system", "You are an experienced data analyst who is assisting the US government in consolidating foreign policy data."
@@ -145,10 +146,13 @@ def create_community_summary(community_components):
          | StrOutputParser()
     )
     q = """Put your detailed and thorough summary below and include a title that is SPECIFIC only to the data in this summary as well. 
-            The summary title should not be generic or broad like 'US Foreign Policy' or 'US Relations with China', 
+            The summary title should not be generic or broad like 'US Foreign Policy' or 'US Relations with China'. Do not use broad
+            term like 'foreign policy' or 'global relations'. The title should be specific to the data in the summary and
             it should focus on specific details and items mentioned in the data.
             These items can be names of people, countries, concepts, policies, etc..
-            Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details
+            Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details.
+            Do not use bullet points.
+            You Must mention as many of the important components of the community as possible in the summary.
             Put your summary and title here:"""
     summary = chain.invoke(q)
     return summary
@@ -175,62 +179,133 @@ def load_summaries():
     return summaries
 
 
+
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
+
+def create_communities_in_graph():
+    #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
+   
+    ## Adds componentId property to nodes as well
+    print("Searching for weakly connected components")
+    result = gds.wcc.mutate(G, mutateProperty = "componentId")
+    print("Components found:", result.componentCount)
+
+    query = """
+        CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
+        YIELD nodeId, propertyValue
+        WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
+        WITH componentId, collect(node) AS comp
+        WITH componentId, comp, size(comp) AS componentSize
+        RETURN componentId, componentSize, comp
+        ORDER BY componentSize DESC 
+    """
+    components = gds.run_cypher(query)
+    print(components)
+
+    gds.run_cypher("""
+        CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
+        YIELD nodePropertiesWritten, componentCount;
+    """)
+
+    gds.leiden.mutate(G, mutateProperty="community")
+    # gds.louvain.mutate(G, mutateProperty="community")
+
+    print(gds.graph.nodeProperties.write(G, ["community"]))
+
+    print(get_node_popularity(),'\n')
+    print(get_local_clustering_coefficients(),'\n')
+    print(get_triangle_count(),'\n')
+
+
+
+def create_undirected_relationships():
+    create_undirected_relationships_query = """
+    
+    CALL db.relationshipTypes() YIELD relationshipType
+    WITH collect(relationshipType) AS relationshipTypes
+    UNWIND relationshipTypes AS rType
+    CALL gds.graph.relationships.toUndirected(
+    'myGraph0',
+    {relationshipType: rType, mutateRelationshipType: rType + '_UNDIRECTED'}
+    )
+    YIELD inputRelationships, relationshipsWritten
+    RETURN rType, inputRelationships, relationshipsWritten
+    """
+    with driver.session() as session:
+        result = session.run(create_undirected_relationships_query)
+        #for record in result:
+        #    print(f"Converted {record['inputRelationships']} relationships of type {record['rType']} to undirected relationships")
+    print("Undirected relationships created")
+
+
+
+#Drop non-undirected relationships
+def drop_relationship_types():
+    with driver.session() as session:
+        result = session.run("""
+            CALL db.relationshipTypes() YIELD relationshipType
+            RETURN collect(relationshipType) AS allRelTypes
+        """)
+        all_rel_types = result.single()["allRelTypes"]
+        
+        #Filter out '_UNDIRECTED' and drop relationships
+        for r_type in all_rel_types:
+            if not r_type.endswith('_UNDIRECTED'):
+                session.run("""
+                    CALL gds.graph.relationships.drop(
+                        'myGraph0',
+                        $relationshipType
+                    )
+                """, parameters={"relationshipType": r_type})
+                print(f"Dropped relationship type: {r_type}")
+    driver.close()
+
+def print_relationship_types():
+    with driver.session() as session:
+        # Query to get all relationship types in the graph projection
+        query = """
+        CALL gds.graph.list() YIELD graphName
+        WHERE graphName = 'myGraph0'
+        CALL gds.graph.relationships.stream(graphName)
+        YIELD relationshipType
+        RETURN DISTINCT relationshipType
+        """
+        result = session.run(query)
+        
+        count = 0
+        for record in result:
+            #print(f"Relationship Type: {record['relationshipType']}")
+            count += 1
+        print(count, "relationship types found")
+    driver.close()
+
+
+"""
+Uncomment to create graph projection and undirected relationships
+"""
+
+# create_graph_projection()
+# create_undirected_relationships()
+# drop_relationship_types()
+
 graphName = "myGraph0"
 
 #MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
 #gds.graph.drop("myGraph0")
 
-#graph_projection = create_graph_projection()
 
-# graph = Neo4jGraph()
 G = gds.graph.get(graphName)
 
-
-# print("Searching for weakly connected components")
-# result = gds.wcc.mutate(G, mutateProperty = "componentId")
-# print("Components found:", result.componentCount)
-
-# print("Searching for strongly connected components")
-# result = gds.scc.mutate(G, mutateProperty = "componentId")
-# print("Components found:", result.componentCount)
-
-
-
-
-# print("Searching for strongly connected components")
-# result = gds.scc.stream(G)
-# print(result)
-# print("Components found:", result.componentCount)
-
-#Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
 """
 Run to generate communities
 """
 
-# query = """
-#     CALL gds.graph.nodeProperties.stream('myGraph0', 'componentId')
-#     YIELD nodeId, propertyValue
-#     WITH gds.util.asNode(nodeId).id AS node, propertyValue AS componentId
-#     WITH componentId, collect(node) AS comp
-#     WITH componentId, comp, size(comp) AS componentSize
-#     RETURN componentId, componentSize, comp
-#     ORDER BY componentSize DESC 
-# """
-# components = gds.run_cypher(query)
-# print(components)
-
-# gds.run_cypher("""
-#     CALL gds.wcc.write('myGraph0', { writeProperty: 'community' }) 
-#     YIELD nodePropertiesWritten, componentCount;
-# """)
+#create_communities_in_graph()
 
 
-# gds.louvain.mutate(G, mutateProperty="community")
-
-print(gds.graph.nodeProperties.write(G, ["community"]))
-
-node_popularity = get_node_popularity()
-print(node_popularity,'\n')
+"""
+For getting some info about community size, components, etc.
+"""
 
 community_query = """
     CALL gds.graph.nodeProperties.stream('myGraph0', 'community')
@@ -260,8 +335,11 @@ single_node_communities = 0
 double_node_communities = 0
 triple_node_communities = 0
 quad_node_communities = 0
+medium_communities = 0
 c = 0
 for s in range(len(sizes)):
+
+    #Ignoring single node communities
     if sizes[s] == 1:
         single_node_communities += 1
     else:
@@ -271,16 +349,16 @@ for s in range(len(sizes)):
             double_node_communities += 1
         if sizes[s] == 3:
             triple_node_communities += 1
-        if 4<= sizes[s] < 25:
+        if sizes[s] == 4:
             quad_node_communities += 1
-        else:
-            c += 1
+        if 4<= sizes[s] < 25:
+            medium_communities += 1
 
 print("Single node communities:",single_node_communities)
 print("Double node communities:",double_node_communities)
 print("Triple node communities:",triple_node_communities)
 print("Quad node communities:",quad_node_communities)
-print("Communities between 4 and 25 nodes:",c)
+print("Communities between 4 and 25 nodes:",medium_communities)
 print(f"There will be {total} community summaries generated")
 
 """
@@ -316,13 +394,11 @@ Uncomment when generating new community summaries
 Loading Summaries
 """
 
-
-
-# with open('community_summaries.pkl', 'rb') as file: 
+with open('community_summaries.pkl', 'rb') as file: 
       
-#     # Call load method to deserialze 
-#     summaries = pickle.load(file) 
+    # Call load method to deserialze 
+    summaries = pickle.load(file) 
   
-# print(f"Loaded all summaries. {len(summaries)} from file") 
+print(f"Loaded all summaries. {len(summaries)} from file") 
 
 

@@ -1,5 +1,5 @@
 from typing import Tuple, List, Optional
-
+from langchain_community.llms.ollama import Ollama
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
@@ -33,6 +33,7 @@ llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
 graph = Neo4jGraph()
 
 
+#llm = Ollama(model="llama3",temperature=0.5)
 
 vector_index = Neo4jVector.from_existing_graph(
     OpenAIEmbeddings(),
@@ -96,7 +97,7 @@ def structured_retriever(question: str) -> str:
               MATCH (node)<-[r:!MENTIONS]-(neighbor)
               RETURN neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output, node.id AS nodeId, neighbor.id AS neighborId
             }
-            RETURN output, nodeId, neighborId LIMIT 200
+            RETURN output, nodeId, neighborId LIMIT 100
             """,
             {"query": generate_full_text_query(entity)},
         )
@@ -104,17 +105,11 @@ def structured_retriever(question: str) -> str:
         for n in response:
             node = n['nodeId']
             if node not in nodes:
-                nodes.append(node)
-        
-
-        
+                nodes.append(node)        
         for e in response:
             neighbor = e['neighborId']
             if neighbor not in neighbors:
                 neighbors.append(neighbor)
-        
-
-        
 
         result += "\n".join([el['output'] for el in response])
     print("Nodes:",nodes)
@@ -185,6 +180,8 @@ prompt = ChatPromptTemplate.from_messages(
         )
 
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.7)
+#llm = Ollama(model="llama3",temperature=0.7)
+
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
