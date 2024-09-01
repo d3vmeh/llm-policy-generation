@@ -158,8 +158,8 @@ def retriever(question: str):
                     {summaries_str}
                     """
     #print(structured_data)
-    #print("Final data:")
-    #print(final_data)
+    print("Final data:")
+    print(final_data)
     wordcloud = create_wordcloud(final_data)
     return final_data
 
