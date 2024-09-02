@@ -31,10 +31,12 @@ NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
 NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
-
+print("Running querying.py")
 summaries = load_summaries()
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
+print("Loading Graph")
 graph = Neo4jGraph()
+print("Graph loaded") 
 wordcloud = None
 #llm = Ollama(model="llama3",temperature=0.5)
 
@@ -50,7 +52,7 @@ class Entities(BaseModel):
     """Identifying information about entities."""
     names: List[str] = Field(
         ...,
-        description="All the person, organization, or business entities that "
+        description="All the person, law, technology, policy, country, organization, or business entities that "
         "appear in the text",
     )   
 
@@ -105,6 +107,24 @@ def structured_retriever(question: str) -> str:
             {"query": generate_full_text_query(entity)},
         )
         
+
+        #Third relationship
+        alternate_query = """CALL db.index.fulltext.queryNodes('entity', $query, {limit:3})
+            YIELD node,score
+            CALL {
+              WITH node
+              MATCH (node)-[r:!MENTIONS]->(neighbor)-[r2:!MENTIONS]->(neighbor2)
+              RETURN node.id + ' - ' + type(r) + ' -> ' + neighbor.id + ' - ' + type(r2) + '->' + neighbor2.id AS output, node.id AS nodeId, neighbor.id AS neighborId, neighbor2.id AS neighbor2Id
+              UNION ALL
+              WITH node
+              MATCH (node)<-[r:!MENTIONS]-(neighbor)<-[r2:!MENTIONS]-(neighbor2)
+              RETURN neighbor2.id + ' - ' + type(r2) + '->' + neighbor.id + ' - ' + type(r) + ' -> ' +  node.id AS output, node.id AS nodeId, neighbor.id AS neighborId, neighbor2.id AS neighbor2Id
+            }
+            RETURN output, nodeId, neighborId LIMIT 100
+            """
+
+
+
         for n in response:
             node = n['nodeId']
             if node not in nodes:
@@ -115,8 +135,8 @@ def structured_retriever(question: str) -> str:
                 neighbors.append(neighbor)
 
         result += "\n".join([el['output'] for el in response])
-    print("Nodes:",nodes)
-    print("Neighbors:",neighbors)
+    #print("Nodes:",nodes)
+    #print("Neighbors:",neighbors)
     #print("Returning:",nodes,neighbors)
     return result, nodes, neighbors
 
@@ -191,11 +211,13 @@ prompt = ChatPromptTemplate.from_messages(
 
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
 #llm = Ollama(model="llama3",temperature=0.7)
-
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
     | llm
     | StrOutputParser()
 )
+
+print("Finished querying.py")
+
 

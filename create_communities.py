@@ -11,6 +11,8 @@ from langchain_openai import ChatOpenAI
 import pickle
 import os
 
+
+print("Running create_communities.py")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
@@ -36,13 +38,19 @@ def get_node_labels_and_relationship_types(tx):
 
     return node_labels, relationship_types
 
-#driver.close()
-with driver.session() as session:
-    node_labels, relationship_types = session.read_transaction(get_node_labels_and_relationship_types)
 
-# Convert node labels and relationship types to the format expected by gds.graph.project
-node_projection = {label: {} for label in node_labels}  # Assuming no properties to include
-relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type in relationship_types}  # Assuming no properties to include
+"""
+
+No longer neeed with updated code
+
+"""
+# #driver.close()
+# with driver.session() as session:
+#     node_labels, relationship_types = session.read_transaction(get_node_labels_and_relationship_types)
+
+# # Convert node labels and relationship types to the format expected by gds.graph.project
+# node_projection = {label: {} for label in node_labels}  # Assuming no properties to include
+# relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type in relationship_types}  # Assuming no properties to include
 
 def create_graph_projection(graphName="myGraph0"):
     print("Creating graph projection")
@@ -402,11 +410,12 @@ Uncomment when generating new community summaries
 Loading Summaries
 """
 
-with open('community_summaries.pkl', 'rb') as file: 
+# with open('community_summaries.pkl', 'rb') as file: 
       
-    # Call load method to deserialze 
-    summaries = pickle.load(file) 
+#     # Call load method to deserialze 
+#     summaries = pickle.load(file) 
   
-print(f"Loaded all summaries. {len(summaries)} from file") 
+# print(f"Loaded all summaries. {len(summaries)} from file") 
 
 
+print("Finished running create_communities.py")
