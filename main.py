@@ -2,6 +2,8 @@ from querying import *
 import sys
 import streamlit as st
 import shelve
+from PIL import Image
+
 
 def load_chat_history():
     db = shelve.open("conversation_history")
@@ -38,7 +40,12 @@ if query := st.chat_input("How can I help?"):
         
         #print(context)
         response = chain.invoke(query)
-        message_placeholder.markdown(response)   
+        message_placeholder.markdown(response) 
+        try:
+            img = Image.open('wordcloud.png')
+            st.image(img, caption='Wordcloud of the response', use_column_width=True)
+        except:
+            pass  
     st.session_state.messages.append({"role": "assistant", "content": response})
 
 save_chat_history(st.session_state.messages)
