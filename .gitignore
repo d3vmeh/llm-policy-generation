@@ -8,3 +8,6 @@ community_summaries.txt
 already_saved/
 community_summaries.pkl
 wordcloud.png
+conversation_history.bak
+conversation_history.dat
+conversation_history.dir

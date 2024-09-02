@@ -146,13 +146,21 @@ def create_community_summary(community_components):
          | StrOutputParser()
     )
     q = """Put your detailed and thorough summary below and include a title that is SPECIFIC only to the data in this summary as well. 
+            
+            
+            
             The summary title should not be generic or broad like 'US Foreign Policy' or 'US Relations with China'. Do not use broad
             term like 'foreign policy' or 'global relations'. The title should be specific to the data in the summary and
             it should focus on specific details and items mentioned in the data.
             These items can be names of people, countries, concepts, policies, etc..
+
+
             Do not just say a broad term such as 'key foreign policy' or 'global relations' without providing more details.
             Do not use bullet points.
-            You Must mention as many of the important components of the community as possible in the summary.
+
+
+            You must mention all of the important components of the community in the summary. Make sure the usmmary is clear, easy to understand, and easy to analyze.
+
             Put your summary and title here:"""
     summary = chain.invoke(q)
     return summary
@@ -300,7 +308,7 @@ G = gds.graph.get(graphName)
 Run to generate communities
 """
 
-#create_communities_in_graph()
+# create_communities_in_graph()
 
 
 """
@@ -359,7 +367,7 @@ print("Double node communities:",double_node_communities)
 print("Triple node communities:",triple_node_communities)
 print("Quad node communities:",quad_node_communities)
 print("Communities between 4 and 25 nodes:",medium_communities)
-print(f"There will be {total} community summaries generated")
+print(f"There will be {total} community summaries")
 
 """
 Uncomment when generating new community summaries

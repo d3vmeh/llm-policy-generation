@@ -189,7 +189,7 @@ prompt = ChatPromptTemplate.from_messages(
         ]
         )
 
-llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.7)
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
 #llm = Ollama(model="llama3",temperature=0.7)
 
 chain = (
