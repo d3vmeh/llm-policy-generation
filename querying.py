@@ -38,7 +38,6 @@ print("Loading Graph")
 graph = Neo4jGraph()
 print("Graph loaded") 
 wordcloud = None
-#llm = Ollama(model="llama3",temperature=0.5)
 
 vector_index = Neo4jVector.from_existing_graph(
     OpenAIEmbeddings(),
@@ -210,7 +209,7 @@ prompt = ChatPromptTemplate.from_messages(
         )
 
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
-#llm = Ollama(model="llama3",temperature=0.7)
+#llm = Ollama(model="llama3.2",temperature=0.6)
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
