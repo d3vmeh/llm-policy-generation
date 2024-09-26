@@ -122,7 +122,7 @@ def get_triangle_count():
 
 def create_community_summary(community_components):
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
-    llm = Ollama(model="llama3.1",temperature=0.5)
+    llm = Ollama(model="llama3.2",temperature=0.5)
 
     prompt = ChatPromptTemplate.from_messages(
         [
