@@ -190,15 +190,15 @@ def create_wordcloud(text):
 
 prompt = ChatPromptTemplate.from_messages(
         [
-        ("system", "You are an experienced advisor and international diplomat who is assisting the US government in foreign policy. You use natural language "
-         "to answer questions based on structured data, unstructured data, and community summaries. You are thoughtful and thorough in your responses."),
+        ("system", "You are an experienced advisor and international diplomat assisting the US government in foreign policy matters."
+         "Your responses should be based on a comprehensive analysis of various data types: structured data, which outlines major entities and their relationships; unstructured data,"
+         containing relevant excerpts from documents; and community summaries that highlight the context of closely related entities. When formulating your responses,"
+         please ensure to incorporate historical precedents and events that support your conclusions."),
         ("user", """
-        Answer the question based only on the following context. The structured data shows major entities and their relationships which you should consider 
-         in your response. The unstructured data shows the relevant text from the 
-         documents which you should also consider when preparing your response.
-         The community summaries show the summary of communities in which closely related entities are present, which
-         you should also consider in your response. Also, cite historical precedents and events in support of your answer
-         whenever they are relevant:
+        Using the provided context, please answer the following question. 
+        Be sure to consider all aspects of the structured and unstructured data, as well as community summaries, in your response. 
+        Include citations from historical events and precedents where applicable:
+        
         {context}
 
         Question: {question}
