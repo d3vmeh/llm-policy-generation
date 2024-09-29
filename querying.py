@@ -190,18 +190,24 @@ def create_wordcloud(text):
 
 prompt = ChatPromptTemplate.from_messages(
         [
-        ("system", "You are an experienced advisor and international diplomat who is assisting the US government in foreign policy. You use natural language "
-         "to answer questions based on structured data, unstructured data, and community summaries. You are thoughtful and thorough in your responses."),
+        ("system", """
+        You are an experienced advisor and international diplomat assisting the US government in shaping foreign policy. Your role is to provide insightful and comprehensive answers to inquiries by synthesizing structured data, unstructured data, and community summaries. 
+        Please respond thoughtfully and thoroughly, 
+        ensuring that your answers reflect a deep understanding of global issues and diplomatic nuances.
+        """),
         ("user", """
-        Answer the question based only on the following context. The structured data shows major entities and their relationships which you should consider 
-         in your response. The unstructured data shows the relevant text from the 
-         documents which you should also consider when preparing your response.
-         The community summaries show the summary of communities in which closely related entities are present, which
-         you should also consider in your response. Also, cite historical precedents and events in support of your answer
-         whenever they are relevant:
+        You are tasked with answering the question based solely on the provided context. Please carefully consider the following sources:                                                                                                               
+        
+        1. **Structured Data**: This includes major entities and their relationships. Use this information to understand the connections and significance of each entity.
+
+        2. **Unstructured Data**: This contains relevant text extracted from various documents. Analyze this text for pertinent information that supports your response.
+
+        3. **Community Summaries**: Review the summaries that outline communities where closely related entities exist. This context is crucial for a comprehensive understanding of the relationships and influences among the entities.
+
+        Additionally, whenever applicable, cite historical precedents and events to strengthen your answer. Ensure your response is well-supported by the information from the below sources.
         {context}
 
-        Question: {question}
+        Here is the question for you to answer: {question}
         Use natural language and be detailed and thorough.
         Answer:
         """)
