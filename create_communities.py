@@ -12,13 +12,10 @@ import pickle
 import os
 
 
-print("Running create_communities.py")
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
 NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
-
-
 gds = GraphDataScience(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
 assert gds.server_version() >= ServerVersion(1, 8, 0)
@@ -39,31 +36,8 @@ def get_node_labels_and_relationship_types(tx):
     return node_labels, relationship_types
 
 
-"""
-
-No longer neeed with updated code
-
-"""
-# #driver.close()
-# with driver.session() as session:
-#     node_labels, relationship_types = session.read_transaction(get_node_labels_and_relationship_types)
-
-# # Convert node labels and relationship types to the format expected by gds.graph.project
-# node_projection = {label: {} for label in node_labels}  # Assuming no properties to include
-# relationship_projection = {rel_type: {'orientation':'UNDIRECTED'} for rel_type in relationship_types}  # Assuming no properties to include
-
-def create_graph_projection(graphName="myGraph0"):
-    print("Creating graph projection")
-    # graph_projection = gds.graph.project(
-    # graphName,
-    # node_projection,
-    # relationship_projection,
-    # )
-
-
-    
-
-
+def create_graph_projection():
+    # There are currently 31729 nodes in the graph. Unable to run via the Python function due to memory issues
     projection_query ="""
     WITH 31729 AS totalNodes, 31729 AS batchSize
     UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
@@ -86,13 +60,12 @@ def create_graph_projection(graphName="myGraph0"):
 
     with driver.session() as session:
         result = session.run(projection_query)
-        #return graph_projection
 
     driver.close()
     print("Graph projection created")
-    print("=============================================")
-    #return graph_projection
 
+
+# The following three functions are used to show some basic statistics about the graph
 def get_local_clustering_coefficients():
     clustering_coefficients = gds.run_cypher("""
         CALL gds.localClusteringCoefficient.stream('myGraph0')
@@ -120,7 +93,12 @@ def get_triangle_count():
     """)
     return triangle_count
 
+
+
+# Using an LLM to generate a summary of a community given a list of all of its components
 def create_community_summary(community_components):
+
+
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
     llm = Ollama(model="llama3.2",temperature=0.5)
 
@@ -153,6 +131,8 @@ def create_community_summary(community_components):
          | llm
          | StrOutputParser()
     )
+
+    # Community summary generation prompt
     q = """Put your detailed and thorough summary below and include a title that is SPECIFIC only to the data in this summary as well. 
             
             
@@ -167,7 +147,7 @@ def create_community_summary(community_components):
             Do not use bullet points.
 
 
-            You must mention all of the important components of the community in the summary. Make sure the usmmary is clear, easy to understand, and easy to analyze.
+            You must mention all of the important components of the community in the summary. Make sure the summary is clear, easy to understand, and easy to analyze.
 
             Put your summary and title here:"""
     summary = chain.invoke(q)
@@ -201,7 +181,7 @@ driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 def create_communities_in_graph():
     #Must use gds.util.asNode(nodeId).id to get names. There is no property "name" for the nodes, so gds.util.asNode(nodeId).name returns null
    
-    ## Adds componentId property to nodes as well
+    # Adds componentId property to nodes as well
     print("Searching for weakly connected components")
     result = gds.wcc.mutate(G, mutateProperty = "componentId")
     print("Components found:", result.componentCount)
@@ -306,8 +286,10 @@ Uncomment to create graph projection and undirected relationships
 
 graphName = "myGraph0"
 
-#MUST run when updating/resetting the database -- also requires increasing the Java heap size if using a new DB
-#gds.graph.drop("myGraph0")
+"""
+Need to run if creating a new graph projection
+"""
+# gds.graph.drop("myGraph0")
 
 
 G = gds.graph.get(graphName)
@@ -315,7 +297,6 @@ G = gds.graph.get(graphName)
 """
 Run to generate communities
 """
-
 # create_communities_in_graph()
 
 
@@ -411,11 +392,8 @@ Loading Summaries
 """
 
 # with open('community_summaries.pkl', 'rb') as file: 
-      
-#     # Call load method to deserialze 
 #     summaries = pickle.load(file) 
   
 # print(f"Loaded all summaries. {len(summaries)} from file") 
 
 
-print("Finished running create_communities.py")

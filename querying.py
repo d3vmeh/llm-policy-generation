@@ -31,12 +31,10 @@ NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
 NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
 
-print("Running querying.py")
 summaries = load_summaries()
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
-print("Loading Graph")
+
 graph = Neo4jGraph()
-print("Graph loaded") 
 wordcloud = None
 
 vector_index = Neo4jVector.from_existing_graph(
@@ -107,7 +105,7 @@ def structured_retriever(question: str) -> str:
         )
         
 
-        #Third relationship
+        # This would be used for an additional neighbor. Needs further testing.
         alternate_query = """CALL db.index.fulltext.queryNodes('entity', $query, {limit:3})
             YIELD node,score
             CALL {
@@ -132,29 +130,26 @@ def structured_retriever(question: str) -> str:
             neighbor = e['neighborId']
             if neighbor not in neighbors:
                 neighbors.append(neighbor)
-
         result += "\n".join([el['output'] for el in response])
-    #print("Nodes:",nodes)
-    #print("Neighbors:",neighbors)
-    #print("Returning:",nodes,neighbors)
+
     return result, nodes, neighbors
 
 def retriever(question: str):
     print(f"Search query: {question}")
-    structured_data, related_nodes, neighbors = structured_retriever(question) #context from graph database - nodes, relationships
-    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)]  #context from graph database - text
+    
+    #context from graph database - nodes, relationships
+    structured_data, related_nodes, neighbors = structured_retriever(question) 
+
+    #context from graph database - text
+    unstructured_data = [el.page_content for el in vector_index.similarity_search(question)] 
     print(structured_data)
-    #print(related_nodes)
-    #print(neighbors)
+
     community_ids = []
     for node in related_nodes:
-        #print("Node:",node)
         community_ids.append(get_community_id(node))
     for neighbor in neighbors:
         community_ids.append(get_community_id(neighbor))
     
-    #print(community_ids)
-
     s = []
     used = []
     for i in community_ids:
@@ -167,6 +162,8 @@ def retriever(question: str):
 
     summaries_str = "\n\n".join(s)
 
+
+    #This will be fed into the LLM prompt
     final_data = f"""Structured data:
                     {structured_data}
 
@@ -176,7 +173,7 @@ def retriever(question: str):
                     Community summaries:
                     {summaries_str}
                     """
-    #print(structured_data)
+
     print("Final data:")
     print(final_data)
     wordcloud = create_wordcloud(final_data)
@@ -216,6 +213,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
 #llm = Ollama(model="llama3.2",temperature=0.6)
+
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
@@ -223,6 +221,5 @@ chain = (
     | StrOutputParser()
 )
 
-print("Finished querying.py")
 
 

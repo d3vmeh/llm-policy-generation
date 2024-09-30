@@ -17,8 +17,8 @@ from langchain_core.documents import Document
 from timebudget import timebudget
 from langchain_community.document_loaders.pdf import PyPDFDirectoryLoader
 
-def load_documents():
 
+def load_documents():
     print("Loading text documents")
     filenames = os.listdir("text_documents/")
     documents = []
@@ -28,11 +28,9 @@ def load_documents():
         text = f.read()
         document = Document(text)
         documents.append(document)
-
     print("Text documents loaded")
 
     print("Loading PDFs")
-    
     doc_loader = PyPDFDirectoryLoader("PDFs/")
     docs = doc_loader.load()
     documents += docs
@@ -57,11 +55,12 @@ print(documents[0])
 
 
 
-llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0) #Need to keep temperature 0
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
+
+# Using Neo4j LLMGraphTransformer to convert the documents
 llm_transformer = LLMGraphTransformer(llm=llm)
 
 print("Converting to graph documents")
-
 with timebudget("Time to convert documents: "):  
     graph_documents = llm_transformer.convert_to_graph_documents(documents)
 
@@ -74,7 +73,6 @@ graph.add_graph_documents(
 print("Documents created")
 
 
-
 vector_index = Neo4jVector.from_existing_graph(
     OpenAIEmbeddings(),
     search_type="hybrid", #search being performed on embedding and keyword as well
@@ -83,5 +81,4 @@ vector_index = Neo4jVector.from_existing_graph(
     embedding_node_property="embedding"
 )
 graph.query("CREATE FULLTEXT INDEX entity IF NOT EXISTS FOR (e:__Entity__) ON EACH [e.id]")
-
 graph._driver.close()
