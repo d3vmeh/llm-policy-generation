@@ -39,7 +39,7 @@ def get_node_labels_and_relationship_types(tx):
 def create_graph_projection():
     # There are currently 31729 nodes in the graph. Unable to run via the Python function due to memory issues
     projection_query ="""
-    WITH 31729 AS totalNodes, 31729 AS batchSize
+    WITH 33333 AS totalNodes, 33333 AS batchSize
     UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
     CALL {
         WITH batchStart, batchSize
@@ -100,7 +100,7 @@ def create_community_summary(community_components):
 
 
     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
-    llm = Ollama(model="llama3.2",temperature=0.5)
+    #llm = Ollama(model="llama3.2",temperature=0.5)
 
     prompt = ChatPromptTemplate.from_messages(
         [
@@ -108,17 +108,22 @@ def create_community_summary(community_components):
          "The data is stored in a list of components that are all related to each other." 
          "You use natural language to summarize the data."), 
         ("user", """
-        Only use the following list of components to summarize the data. Use natural language.
-        Only include the summary of the data in your response.
+        Using only the components provided below, create a comprehensive and coherent summary that captures the essence of the data. Ensure your summary includes a title that is specific to the content, focusing on distinct details such as names, countries, concepts, policies, or significant events mentioned in the data.
 
         ===============================================================
         Here is the data:
 
         {components}
-        
-         
         ===============================================================
-        {question}
+
+        **Title:** [Insert a specific title related to the data]
+
+        **Summary:**
+        In your summary, avoid generic terms like 'foreign policy' or 'global relations.' Instead, delve into the particulars of the components, clearly articulating their significance and interconnections. Your summary should be thorough, easy to understand, and devoid of bullet points, ensuring that all important components are mentioned.
+
+        {question
+        Please provide your detailed summary and title below:
+        
         
         """
         )
@@ -150,6 +155,9 @@ def create_community_summary(community_components):
             You must mention all of the important components of the community in the summary. Make sure the summary is clear, easy to understand, and easy to analyze.
 
             Put your summary and title here:"""
+    
+
+    q = ""
     summary = chain.invoke(q)
     return summary
 
@@ -215,6 +223,7 @@ def create_communities_in_graph():
 
 
 def create_undirected_relationships():
+
     create_undirected_relationships_query = """
     
     CALL db.relationshipTypes() YIELD relationshipType
@@ -280,11 +289,13 @@ def print_relationship_types():
 Uncomment to create graph projection and undirected relationships
 """
 
-# create_graph_projection()
-# create_undirected_relationships()
-# drop_relationship_types()
+create_graph_projection()
+
+create_undirected_relationships()
+drop_relationship_types()
 
 graphName = "myGraph0"
+
 
 """
 Need to run if creating a new graph projection
@@ -297,7 +308,7 @@ G = gds.graph.get(graphName)
 """
 Run to generate communities
 """
-# create_communities_in_graph()
+create_communities_in_graph()
 
 
 """
