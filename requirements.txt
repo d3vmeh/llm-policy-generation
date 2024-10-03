@@ -1,6 +1,6 @@
 Pillow
 graphdatascience
-pdb
+pydub
 matplotlib
 langchain
 langchain-community
