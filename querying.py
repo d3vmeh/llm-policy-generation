@@ -1,6 +1,7 @@
 from typing import Tuple, List, Optional
 from langchain_community.llms.ollama import Ollama
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_anthropic import ChatAnthropic
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts.prompt import PromptTemplate
@@ -27,6 +28,8 @@ import matplotlib.pyplot as plt
 from create_communities import get_community_id, load_summaries
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+
 NEO4J_URI = os.environ["NEO4J_URI"]
 NEO4J_USERNAME = os.environ["NEO4J_USERNAME"]
 NEO4J_PASSWORD = os.environ["NEO4J_PASSWORD"]
@@ -211,9 +214,9 @@ prompt = ChatPromptTemplate.from_messages(
         ]
         )
 
-llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
+#llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
 #llm = Ollama(model="llama3.2",temperature=0.6)
-
+llm = ChatAnthropic(model_name="claude-3-5-sonnet",temperature=0.6)
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt

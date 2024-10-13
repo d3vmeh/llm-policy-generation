@@ -39,7 +39,7 @@ def get_node_labels_and_relationship_types(tx):
 def create_graph_projection():
     # There are currently 31729 nodes in the graph. Unable to run via the Python function due to memory issues
     projection_query ="""
-    WITH 33333 AS totalNodes, 33333 AS batchSize
+    WITH 31729 AS totalNodes, 31729 AS batchSize
     UNWIND range(0, totalNodes - 1, batchSize) AS batchStart
     CALL {
         WITH batchStart, batchSize
@@ -121,7 +121,7 @@ def create_community_summary(community_components):
         **Summary:**
         In your summary, avoid generic terms like 'foreign policy' or 'global relations.' Instead, delve into the particulars of the components, clearly articulating their significance and interconnections. Your summary should be thorough, easy to understand, and devoid of bullet points, ensuring that all important components are mentioned.
 
-        {question
+        {question}
         Please provide your detailed summary and title below:
         
         
@@ -158,6 +158,7 @@ def create_community_summary(community_components):
     
 
     q = ""
+    
     summary = chain.invoke(q)
     return summary
 
@@ -289,10 +290,11 @@ def print_relationship_types():
 Uncomment to create graph projection and undirected relationships
 """
 
-create_graph_projection()
+#create_graph_projection()
 
-create_undirected_relationships()
-drop_relationship_types()
+
+#create_undirected_relationships()
+#drop_relationship_types()
 
 graphName = "myGraph0"
 
@@ -308,7 +310,7 @@ G = gds.graph.get(graphName)
 """
 Run to generate communities
 """
-create_communities_in_graph()
+#create_communities_in_graph()
 
 
 """
@@ -393,18 +395,18 @@ Uncomment when generating new community summaries
 # print(count," community summaries generated")
 
 
-# with open("community_summaries.pkl",'wb') as file:
-#     pickle.dump(summaries, file)
-#     file.close()
+with open("community_summaries.pkl",'wb') as file:
+    pickle.dump(summaries, file)
+    file.close()
 
 
 """
 Loading Summaries
 """
 
-# with open('community_summaries.pkl', 'rb') as file: 
-#     summaries = pickle.load(file) 
+with open('community_summaries.pkl', 'rb') as file: 
+    summaries = pickle.load(file) 
   
-# print(f"Loaded all summaries. {len(summaries)} from file") 
+print(f"Loaded all summaries. {len(summaries)} from file") 
 
 
