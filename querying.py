@@ -216,7 +216,7 @@ prompt = ChatPromptTemplate.from_messages(
 
 #llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.6)
 #llm = Ollama(model="llama3.2",temperature=0.6)
-llm = ChatAnthropic(model_name="claude-3-5-sonnet",temperature=0.6)
+llm = ChatAnthropic(model_name="claude-3-5-sonnet-20240620",temperature=0.6)
 chain = (
     {"context": retriever, "question": RunnablePassthrough()}
     | prompt
