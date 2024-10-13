@@ -395,9 +395,9 @@ Uncomment when generating new community summaries
 # print(count," community summaries generated")
 
 
-with open("community_summaries.pkl",'wb') as file:
-    pickle.dump(summaries, file)
-    file.close()
+# with open("community_summaries.pkl",'wb') as file:
+#     pickle.dump(summaries, file)
+#     file.close()
 
 
 """
