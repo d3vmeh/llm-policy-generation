@@ -9,6 +9,6 @@
 
 ## System Architecture
 
-1. **Neo4j Knowledge Graph**: Stores structured data related to foreign policy, such as relationships between nations, treaties, trade agreements, historical events, and other global factors.
-2. **LLM Integration**: The LLM is augmented with the ability to query the Neo4j knowledge graph, allowing it to retrieve, analyze, and synthesize information from both structured (knowledge graph) and unstructured sources.
-3. **GraphRAG Framework**: Utilizes retrieval-augmented generation (RAG) principles, but enhances the process by incorporating graph-based data for more informed responses.
+- **Neo4j Knowledge Graph**: Stores structured data related to foreign policy, such as relationships between nations, treaties, trade agreements, historical events, and other global factors.
+- **LLM Integration**: The LLM is augmented with the ability to query the Neo4j knowledge graph, allowing it to retrieve, analyze, and synthesize information from both structured (knowledge graph) and unstructured sources.
+- **GraphRAG Framework**: Utilizes retrieval-augmented generation (RAG) principles, but enhances the process by incorporating graph-based data for more informed responses.
