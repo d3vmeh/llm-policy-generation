@@ -23,12 +23,14 @@ def load_documents():
     filenames = os.listdir("text_documents/")
     documents = []
     for f in filenames:
+        if not f.endswith(".txt"):
+            continue
         path = os.path.join("text_documents/", f)
         f = open(path, "r", encoding="utf-8")
         text = f.read()
         document = Document(text)
         documents.append(document)
-    print("Text documents loaded")
+    print(len(documents),"text documents loaded")
 
     print("Loading PDFs")
     doc_loader = PyPDFDirectoryLoader("PDFs/")
