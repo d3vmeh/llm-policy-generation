@@ -58,6 +58,7 @@ def create_graph_projection():
     RETURN graph, nodes, rels;
     """
 
+    print("Creating graph projection")
     with driver.session() as session:
         result = session.run(projection_query)
 
@@ -286,17 +287,72 @@ def print_relationship_types():
     driver.close()
 
 
+def save_graph_projection():
+    """
+    Saves the current graph projection to Neo4j database storage so it persists after restart
+    """
+    with driver.session() as session:
+        # First, write community IDs to the main database
+        session.run("""
+            CALL gds.graph.nodeProperties.write('myGraph0', ['community'])
+            YIELD propertiesWritten
+        """)
+        
+        # Then export the graph projection
+        session.run("""
+            CALL gds.graph.export(
+                'myGraph0',
+                {
+                    dbName: 'neo4j',
+                    graphName: 'myGraph0-persistent',
+                    concurrency: 4
+                }
+            )
+        """)
+        print("Graph projection and community IDs saved successfully")
+    driver.close()
+
+def load_saved_graph_projection():
+    """
+    Loads a previously saved graph projection from Neo4j database storage
+    """
+    with driver.session() as session:
+        session.run("""
+            CALL gds.graph.project.cypher(
+                'myGraph0',
+                'MATCH (n) 
+                 RETURN id(n) AS id, 
+                        labels(n) AS labels, 
+                        n.community AS community',
+                'MATCH (s)-[r]->(t) 
+                 RETURN id(s) AS source, 
+                        id(t) AS target, 
+                        type(r) AS type',
+                {
+                    validateRelationships: false,
+                    nodeProperties: ['community']
+                }
+            )
+        """)
+        print("Graph projection loaded successfully")
+    driver.close()
+
+
+
 """
 Uncomment to create graph projection and undirected relationships
 """
 
-#create_graph_projection()
 
+# create_graph_projection()
+# create_undirected_relationships()
+# drop_relationship_types()
 
-#create_undirected_relationships()
-#drop_relationship_types()
+# save_graph_projection()
+# load_saved_graph_projection()
 
-graphName = "myGraph0"
+# exit()
+# graphName = "myGraph0"
 
 
 """
@@ -305,24 +361,25 @@ Need to run if creating a new graph projection
 # gds.graph.drop("myGraph0")
 
 
-G = gds.graph.get(graphName)
+# G = gds.graph.get(graphName)
 
 """
 Run to generate communities
 """
+
+#print("Creating communities")
 #create_communities_in_graph()
 
+# save_graph_projection()
 
 """
 For getting some info about community size, components, etc.
 """
-
 community_query = """
-    CALL gds.graph.nodeProperties.stream('myGraph0', 'community')
-    YIELD nodeId, propertyValue
-    WITH gds.util.asNode(nodeId).id AS node, propertyValue AS community
-    WITH community, collect(node) AS comp
+    MATCH (n)
+    WITH n.community AS community, collect(n.id) AS comp
     WITH community, comp, size(comp) AS componentSize
+    WHERE community IS NOT NULL
     RETURN community, componentSize, comp
     ORDER BY componentSize DESC
 """
@@ -375,29 +432,29 @@ print(f"There will be {total} community summaries")
 Uncomment when generating new community summaries
 """
 
+print("Generating community summaries")
+count = 0
+for i in range(len(all_community_components)):
+    #print(i)
+    if sizes[i] > 1:
+        converted_string = ", ".join(str(x) for x in all_community_components[i])
 
-# count = 0
-# for i in range(len(all_community_components)):
-#     #print(i)
-#     if sizes[i] > 1:
-#         converted_string = ", ".join(str(x) for x in all_community_components[i])
+        #print(converted_string)
+        s = create_community_summary(converted_string)
+        #c = get_community_id(all_community_components[i][0])
+        summaries[community_ids[i]] = s
+        print(s)
+        print(f"\n{count}/{total} community summaries generated\n")
+        count += 1
+    if sizes[i] <= 1:
+        break
 
-#         #print(converted_string)
-#         s = create_community_summary(converted_string)
-#         #c = get_community_id(all_community_components[i][0])
-#         summaries[community_ids[i]] = s
-#         print(s)
-#         print(f"\n{count}/{total} community summaries generated\n")
-#         count += 1
-#     if sizes[i] <= 1:
-#         break
-
-# print(count," community summaries generated")
+print(count," community summaries generated")
 
 
-# with open("community_summaries.pkl",'wb') as file:
-#     pickle.dump(summaries, file)
-#     file.close()
+with open("community_summaries.pkl",'wb') as file:
+    pickle.dump(summaries, file)
+    file.close()
 
 
 """
