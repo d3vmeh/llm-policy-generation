@@ -431,30 +431,30 @@ print(f"There will be {total} community summaries")
 """
 Uncomment when generating new community summaries
 """
+#print("Generating community summaries")
+#count = 0
 
-print("Generating community summaries")
-count = 0
-for i in range(len(all_community_components)):
-    #print(i)
-    if sizes[i] > 1:
-        converted_string = ", ".join(str(x) for x in all_community_components[i])
-
-        #print(converted_string)
-        s = create_community_summary(converted_string)
-        #c = get_community_id(all_community_components[i][0])
-        summaries[community_ids[i]] = s
-        print(s)
-        print(f"\n{count}/{total} community summaries generated\n")
-        count += 1
-    if sizes[i] <= 1:
-        break
-
-print(count," community summaries generated")
-
-
-with open("community_summaries.pkl",'wb') as file:
-    pickle.dump(summaries, file)
-    file.close()
+#for i in range(len(all_community_components)):
+#    #print(i)
+#    if sizes[i] > 1:
+#        converted_string = ", ".join(str(x) for x in all_community_components[i])
+#
+#        #print(converted_string)
+#        s = create_community_summary(converted_string)
+#        #c = get_community_id(all_community_components[i][0])
+#        summaries[community_ids[i]] = s
+#        print(s)
+#        print(f"\n{count}/{total} community summaries generated\n")
+#        count += 1
+#    if sizes[i] <= 1:
+#        break
+#
+#print(count," community summaries generated")
+#
+#
+#with open("community_summaries.pkl",'wb') as file:
+#    pickle.dump(summaries, file)
+#    file.close()
 
 
 """
