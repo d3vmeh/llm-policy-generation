@@ -1,6 +1,14 @@
-# llm-policy-generation
+# AI Foreign Policy Assistant
 
-This project involves creating an AI foreign policy assistant.
+## Key Features
+
+- **GraphRAG System**: Combines the power of knowledge graphs (via Neo4j) with an LLM to provide advanced retrieval and generation capabilities.
+- **Foreign Policy Focus**: Tailored for high-level decision-making in foreign policy, where multiple perspectives, global implications, and rich relationships between nations are essential.
+- **Enhanced Contextual Understanding**: Knowledge graphs allow the LLM to understand and analyze more complex relationships and entities, offering more informed and contextual responses compared to traditional RAG.
 
 
-Retrieval-augmented-generation (RAG) allows for optimization of the output of a large-language model (LLM) by allowing it to access information outside of its training database. This allows the capabilities of the LLM to be applied to new datasets and tasks. However, RAG is limited in its ability to answer high-level questions about a dataset. This project explores how, instead of using traditional RAG, LLMs can be supplemented with knowledge graphs to assist in foreign policy decision-making. Foreign policy is an area which requires a high-level understanding of multiple perspectives, global implications, and rich relationships between nations, which makes knowledge graphs better suited for it than traditional RAG.
+## System Architecture
+
+- **Neo4j Knowledge Graph**: Stores structured data related to foreign policy, such as relationships between nations, treaties, trade agreements, historical events, and other global factors.
+- **LLM Integration**: The LLM is augmented with the ability to query the Neo4j knowledge graph, allowing it to retrieve, analyze, and synthesize information from both structured (knowledge graph) and unstructured sources.
+- **GraphRAG Framework**: Utilizes retrieval-augmented generation (RAG) principles, but enhances the process by incorporating graph-based data for more informed responses.
