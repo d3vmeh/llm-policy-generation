@@ -2,7 +2,7 @@
 
 
 ## Research Paper
-While the full research paper is not yet published, the research paper for this project has been completed and is available as a PDF file directly within the repository. It provides an in-depth overview of the project's objectives, methodologies, and key findings.
+While I am still working towards getting the research paper for this project published, it has been completed and is available as a PDF file directly within the repository. It provides an in-depth overview of the project's objectives, methodologies, and key findings.
 
 [Access the Research Paper (PDF)](./AI%20Foreign%20Policy%20Assistant%20Powered%20by%20GraphRAG%20Techniques%20(Paper).pdf)
 
